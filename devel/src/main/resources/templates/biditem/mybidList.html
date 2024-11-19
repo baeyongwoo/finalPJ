@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layouts/layout2}">
+
+
+<head>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+</head>
+
+<!-- 사용자 CSS 추가 -->
+<th:block layout:fragment="css">
+    <style>
+        .flex-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .table-container {
+            flex: 1;
+        }
+        .table {
+            width: 100%;
+        }
+        .table thead {
+            background-color: #E9ECEF;
+        }
+
+        .table-striped tbody tr:hover {
+            background-color: lightgray !important; /* 모든 행에 동일하게 hover 색상 적용 */
+            cursor: pointer;
+        }
+        .table-striped tbody tr:nth-child(even) {
+            background-color: #F9F9F9;
+        }
+        .table td, .table th {
+            vertical-align: middle;
+            text-align: center;
+        }
+    </style>
+</th:block>
+
+<div layout:fragment="content" style="margin-left: 25%; margin-right: 25%;">
+  <script>
+      document.addEventListener("DOMContentLoaded", function() {
+          const rows = document.querySelectorAll('#bidTable tbody tr');
+          rows.forEach(function(row) {
+              const bidItemId = row.querySelector('.bid-item-id').value;
+              const endDateElement = row.querySelector('.bid-end-date');
+              const endDateStr = endDateElement.getAttribute('data-enddate');
+              const endDate = new Date(endDateStr);
+              const now = new Date();
+              const timeDiff = endDate - now;
+              // 포맷팅 (예: YYYY-MM-DD)
+              const formattedEndDate = `${endDate.getFullYear()}-${('0' + (endDate.getMonth() + 1)).slice(-2)}-${('0' + endDate.getDate()).slice(-2)}`;
+              endDateElement.textContent = formattedEndDate;
+              // 하루 전날이면 빨간색으로 표시
+              if (timeDiff <= 1000 * 60 * 60 * 24 && timeDiff > 0) { endDateElement.style.color = 'red'; }
+              row.addEventListener('click', function() { window.location.href = `/biditem/view/${bidItemId}`;
+              });
+              // 금액에 콤마 추가
+              row.querySelectorAll('.bid-price').forEach(function(priceElement) {
+                  const priceText = priceElement.textContent.trim();
+                  const formattedPrice = Number(priceText).toLocaleString();
+                  priceElement.textContent = formattedPrice + '원';
+              });
+          });
+      });
+  </script>
+
+    <h2>경매상품 판매목록</h2>
+
+    <table id="bidTable" class="table table-striped">
+        <thead>
+        <tr>
+            <th scope="col">경매카테고리</th>
+            <th scope="col">경매아이템</th>
+            <th scope="col">경매시작가</th>
+            <th scope="col">현재입찰가</th>
+            <th scope="col">입찰횟수</th>
+            <th scope="col">시작일</th>
+            <th scope="col">종료일</th>
+            <th scope="col">경매상태</th>
+<!--            <th scope="col">판매자 ID</th>-->
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="bid : ${mybidList}">
+            <td th:text="${bid.cname}"></td>
+            <td th:text="${bid.bidItemName}"></td>
+            <td class="bid-price" th:text="${bid.startPrice}"></td>
+            <td class="bid-price" th:text="${bid.bidNowPrice}"></td>
+            <td th:text="${bid.bidCount-1}"></td>
+            <td th:text="${#temporals.format(bid.bidStartDate, 'yyyy-MM-dd')}"></td>
+            <td class="bid-end-date" th:attr="data-enddate=${bid.bidEndDate}"></td>
+            <td th:switch="${bid.itemStatus}">
+                <span th:case="'WAIT'">경매대기중</span>
+                <span th:case="'ING'">경매중</span>
+                <span th:case="'END'">경매종료</span>
+            </td>
+<!--            <td th:text="${bid.memberId}"></td>-->
+            <input type="hidden" class="bid-item-id" th:value="${bid.bidItemId}"/>
+        </tr>
+
+
+        </tbody>
+    </table>
+</div>
+</html>

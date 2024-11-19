@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layouts/layout2}">
+
+
+<head>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/min/moment.min.js"></script>
+
+    <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+</head>
+
+<!-- 사용자 CSS 추가 -->
+<th:block layout:fragment="css">
+    <style>
+        .mgb-15 {
+            margin-bottom: 15px;
+        }
+        .mgt-30 {
+            margin-top: 30px;
+        }
+        .repImg {
+            width: 100%;
+            height: 400px;
+            object-fit: contain;
+            object-position: center;
+            border:1px solid lightgray;
+            opacity:1;
+            transition:opacity 0.2s ease;
+        }
+        .repImg.fade-out{
+            opacity:0;
+        }
+        .carousel-img {
+            width: 104px;
+            height: 130px;
+            cursor: pointer;
+            object-fit: contain;
+            object-position: center;
+            margin-top:15px;
+            border:1px solid lightgray;
+            padding:3px;
+            border-radius:10px;
+            transition: transform 0.3s ease;
+        }
+        .carousel-img.selected-thumbnail {
+            transform: scale(1.15);
+        }
+        .flex-container {
+            display: flex;
+            align-items: stretch;
+            justify-content: space-between;
+        }
+        .flex-item {
+            flex: 1;
+            margin-right: 100px;
+        }
+        .flex-item:last-child {
+            margin-right: 0;
+        }
+        .thumbnail-container {
+            display: flex;
+            gap: 10px;
+        }
+        .wd50 {
+            height: auto;
+            width: 50%;
+        }
+        .modal {
+          display: none;
+          position: fixed;
+          z-index: 10000;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          overflow: auto;
+          background-color: rgb(0,0,0);
+          background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+          background-color: #fefefe;
+          margin: 15% auto;
+          padding: 20px;
+          border: 1px solid #888;
+          width: 800px;
+          height: 800px;
+          position: absolute;
+          z-index:1200;
+          top: 500px;
+          left: 50%;
+          transform: translate(-50%, -50%);
+        }
+
+        .close {
+          color: #aaa;
+          float: right;
+          font-size: 28px;
+          font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+          color: black;
+          text-decoration: none;
+          cursor: pointer;
+        }
+        .d-flex {
+            display: flex; /* flexbox를 사용하여 가로로 배치 */
+            align-items: flex-start; /* 버튼과 제목을 상단 정렬 */
+            justify-content: space-between; /* 양 끝으로 배치 */
+        }
+        .wishlist-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin: 0; /* 버튼의 여백 제거 */
+            padding: 0; /* 패딩 제거하여 크기 최소화 */
+        }
+
+        .wishlist-btn .fa-heart {
+            font-size: 24px;
+            color: grey;
+        }
+
+        .wishlist-btn .fa-heart.red {
+            color: red;
+        }
+
+        .wishlist-btn:focus {
+            outline: none;
+            box-shadow: none;
+        }
+        .scroll-button-container {
+            position: fixed;
+            top: 50%;
+            right: 50px;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .scroll-button {
+            background-color: #5D9BD6;
+            color: white;
+            border: none;
+            width: 57px;
+            height: 57px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            outline: none;
+        }
+
+        .scroll-button:hover {
+            background-color: #0056b3;
+        }
+
+        .scroll-button:focus {
+            outline: none;
+        }
+
+        .scroll-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+            line-height: 1.2;
+        }
+
+        .wishlist-container img {
+            transition: filter 0.3s ease;
+        }
+        .wishlist-container img:hover {
+            filter: grayscale(100%);
+        }
+        .wishlist-container li{
+            transition:transform 0.3s ease;
+        }
+        .wishlist-container li:hover{
+            transform: translateY(-5px);
+        }
+        .link-hover h6 {
+            transition: color 0.3s ease, transform 0.3s ease;
+            text-align: center;
+            display: block;
+            color: gray;
+        }
+
+        .link-hover:hover h6 {
+            color: black;
+            transform: translateY(-5px);
+        }
+        .link-hover {
+            text-decoration: none !important; /* 링크에 강제 밑줄 제거 */
+        }
+        /* 모달 내 테이블 스타일 */
+        .modal-content .table td, .modal-content .table th {
+            text-align: center; /* 모달 테이블 내용 중앙 정렬 */
+            vertical-align: middle;
+        }
+        #bidNowPrice {
+            width: 200px;
+        }
+    </style>
+</th:block>
+
+<div layout:fragment="content" style="margin-left: 25%; margin-right: 25%;">
+
+    <input type="hidden" id="biditemId" th:value="${biditem.bidItemId}">
+    <div style="width: 80%; margin: 0 auto;">
+        <div class="h6" th:text="'🌟경매 > '+${biditem.cname} +' > ' + ${biditem.bidItemId}"></div>
+        <div class="flex-container mb-4">
+
+            <div class="flex-item">
+                <!-- 큰 이미지 -->
+                <div class="img" style="position: relative; width: 100%; margin: 0 auto;">
+                    <img id="largeImage"
+                         th:src="${biditem.biditemImgDtoList[0].imgUrl}"
+                         class="rounded repImg"
+                         data-zoom="3"
+                         alt="큰 이미지"
+                         style="display: block; width: 100%;">
+
+                    <span class="magnifier"
+                          style="display: none; position: absolute; width: 200px; height: 200px; border-radius: 50%; z-index: 1; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);">
+        </span>
+                </div>
+
+                <!-- 썸네일 이미지들 -->
+                <div class="thumbnail-container mb-4">
+                    <!-- 조그만 이미지들 -->
+                    <img th:each="itemImg : ${biditem.biditemImgDtoList}"
+                         th:if="${not #strings.isEmpty(itemImg.imgUrl)}"
+                         th:src="${itemImg.imgUrl}"
+                         class="thumbnail-img carousel-img"
+                         alt="썸네일 이미지"
+                         style="width: 100px; height: 100px; object-fit: cover; margin-right: 10px;">
+                </div>
+
+                <span style="color:gray">※ 이미지에 마우스를 올리시면 확대하여 보실수 있습니다.</span>
+            </div>
+            <div class="wd50">
+                <div class="flex-item" style="margin-right:0 !important">
+                    <div class="d-flex justify-content-between">
+                        <!-- 경매 상태 표시 -->
+                        <span th:if="${biditem.itemStatus == 'ING'}" class="badge badge-primary mgb-15">
+                            경매중
+                        </span>
+                                <span th:if="${biditem.itemStatus == 'WAIT'}" class="badge badge-warning mgb-15">
+                            경매대기중
+                        </span>
+                                <span th:if="${biditem.itemStatus == 'END'}" class="badge badge-danger mgb-15">
+                            경매종료
+                        </span>
+                        <div></div> <!-- 빈 div로 첫 번째 줄을 비우기 위해 추가 -->
+                        <button id="wishlistButton" data-biditemid="${biditem.bidItemId}" class="wishlist-btn" sec:authorize="isAuthenticated()">
+                            <i id="heartIcon" class="far fa-heart"></i> <!-- 기본은 빈 하트 -->
+                        </button>
+                    </div>
+                    <div class="h4" th:text="${biditem.bidItemName}"></div> <!-- 제목이 두 번째 줄에 위치 -->
+                </div>
+
+                <div class="scroll-button-container">
+                    <div class="wishlist-container mb-3" th:if="${#authorization.expression('isAuthenticated()')}">
+                        <a href="/members/wishlist" class="scroll-label link-hover">
+                            <h6><i class="fas fa-heart" style="color:red;"></i> 관심상품</h6>
+                        </a>
+                        <ul style="list-style-type: none; padding: 0;">
+                            <!-- 관심 상품이 있는 경우 목록을 출력 -->
+                            <li th:if="${not #lists.isEmpty(recentBidWishlist)}" th:each="wishlistItem : ${recentBidWishlist}" style="margin-bottom: 15px;">
+                                <a th:href="'/biditem/view/' + ${wishlistItem.BidItemId}" class="text-dark d-flex flex-column align-items-center" style="text-decoration: none !important;">
+                                    <img th:src="${wishlistItem.imgUrl}" style="width: 95px; height: 95px; object-fit: contain; object-position: center; margin-bottom: 5px; border:1px solid lightgray; border-radius:10px;">
+                                    <span th:text="${wishlistItem.BidItemName}" style="font-size: 14px; overflow: hidden; text-overflow: ellipsis; text-align: left; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; width: 100px; line-height: 1.3em; max-height: 2.6em;"></span>
+                                </a>
+                            </li>
+
+                            <!-- 관심 상품이 없을 경우 표시할 메시지 -->
+                            <li th:if="${#lists.isEmpty(recentBidWishlist)}" class="text-center" style="color: gray; font-size: 14px; margin-top:10px;">
+                                현재 관심상품이 <br>없습니다.
+                            </li>
+                        </ul>
+                    </div>
+                    <!-- 로그인하지 않은 상태에서는 공간을 남겨두기 -->
+                    <div th:if="${!#authorization.expression('isAuthenticated()')}" style="visibility: hidden; height: 450px;"></div>
+                    <button class="scroll-button" onclick="scrollToHeader()">
+                        <div class="scroll-label">
+                            UP<br>
+                            <i class="fas fa-chevron-up"></i>
+                        </div>
+                    </button>
+
+                    <!-- Scroll Down Button -->
+                    <button class="scroll-button" onclick="scrollToFooter()">
+                        <div class="scroll-label">
+                            <i class="fas fa-chevron-down"></i>
+                            DOWN<br>
+                        </div>
+                    </button>
+                </div>
+
+                 <script>
+                    $(document).ready(function() {
+                        var csrfToken = $('meta[name="_csrf"]').attr('content');
+                        var csrfHeader = $('meta[name="_csrf_header"]').attr('content');
+                        var bidItemId = $('#biditemId').val();
+                        var heartIcon = $('#heartIcon');
+
+                        // 큰 이미지 전환 코드
+                        $(".thumbnail-img").click(function() {
+                            var src = $(this).attr("src");
+
+                            // fade-out 클래스를 추가하여 서서히 사라지는 효과 적용
+                            $("#largeImage").addClass("fade-out");
+
+                            // fade-out 애니메이션이 끝나면 src 변경 및 fade-out 클래스 제거
+                            $("#largeImage").on("transitionend", function() {
+                                $(this).attr("src", src).removeClass("fade-out");
+                            });
+
+                            // 썸네일 선택 표시 업데이트
+                            $(".thumbnail-img").removeClass("selected-thumbnail");
+                            $(this).addClass("selected-thumbnail");
+                        });
+
+                        // 페이지 로드 시 관심상품 여부 확인
+                        $.ajax({
+                            url: '/wishlist/check',
+                            type: 'GET',
+                           data: { entityType: 'bidItem', entityId: bidItemId },
+                            success: function(response) {
+                                if (response) {
+                                     heartIcon.addClass('fas red'); // 관심상품일 경우 채워진 빨간 하트
+                                 } else {
+                                     heartIcon.addClass('fas').addClass('grey'); // 관심상품이 아닐 경우 빈 하트
+                                 }
+                            }
+                        });
+
+                        // 관심상품 버튼 클릭 시 토글
+                        $('#wishlistButton').click(function() {
+                            $.ajax({
+                                url: '/wishlist/toggle',
+                                type: 'POST',
+                                contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+                                data: { entityType: 'bidItem', entityId: bidItemId },
+                                beforeSend: function(xhr) {
+                                    xhr.setRequestHeader(csrfHeader, csrfToken);
+                                },
+                                success: function(response) {
+                                    if (heartIcon.hasClass('red')) {
+                                        heartIcon.removeClass('red');
+                                        alert('관심상품 해제되었습니다.');
+                                    } else {
+                                        heartIcon.addClass('red');
+                                        alert('관심상품 등록되었습니다.');
+                                    }
+                                },
+                                error: function(xhr, status, error) {
+                                    console.log('Status:', status);
+                                    console.log('Error:', error);
+                                    console.log('ResponseText:', xhr.responseText);
+                                    alert('관심상품 기능에 실패했습니다.');
+                                }
+                            });
+                        });
+                    });
+                     function scrollToHeader() {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+
+                    function scrollToFooter() {
+                        document.querySelector('.footer').scrollIntoView({ behavior: 'smooth' });
+                    }
+                </script>
+
+                <hr class="my-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <span style="font-size: 17px; margin-right: 8px;">입찰횟수</span>
+                        <span class="h3 m-0" th:text="${biditem.bidCount-1}"></span>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="bidListButton" th:data-biditemid="${biditem.bidItemId}">입찰내역보기</button>
+                </div>
+
+                <!-- 입찰목록 모달 창 -->
+                <div class="modal fade" id="bidListModal" tabindex="-1" role="dialog" aria-labelledby="bidListModalLabel" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="bidListModalLabel">입찰목록</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <table id="bidTable" class="table table-striped">
+                                    <thead>
+                                    <tr>
+                                        <th scope="col">번호</th>
+                                        <th scope="col">금액</th>
+                                        <th scope="col">등록자</th>
+                                        <th scope="col">시간</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">닫기</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    $(document).ready(function() {
+                        $('#bidListButton').click(function() {
+                            var bidItemId = $(this).data('biditemid');
+                            console.log('AJAX 요청 시작. Bid Item ID:', bidItemId);  // 로그 추가
+
+                            $.ajax({
+                                url: '/biditem/getBidList',
+                                type: 'GET',
+                                data: { bidItemId: bidItemId },
+                                dataType: 'json',
+                                success: function(data) {
+                                    console.log('Data received:', data);  // 데이터 수신 로그
+                                    var bidTableBody = $('#bidTable tbody');
+                                    bidTableBody.empty();
+                                    var formatter = new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' });
+
+                                    $.each(data, function(index, bid) {
+
+                                        if(index === data.length -1 ) {
+                                            return true;
+                                        }
+                                        bidTableBody.append(
+                                            '<tr>' +
+                                            '<td>' + bid.rownum + '</td>' +
+                                            '<td>' + bid.bidRegPrice.toLocaleString('ko-KR') + '원</td>' +
+                                            '<td>' + (isNumeric(bid.createdBy) || bid.createdBy.length >= 30 ? bid.email : bid.createdBy) + '</td>' +
+                                            '<td>' + moment(bid.regtime).format('YYYY-MM-DD HH:mm:ss') + '</td>' +
+                                            '</tr>'
+                                        );
+                                    });
+                                    $('#bidListModal').modal('show');
+                                },
+                                error: function(xhr, status, error) {
+
+                                    alert('로그인 후 이용가능합니다.');
+                                    window.location.href= '/members/login';
+                                }
+                            });
+                        });
+                    });
+
+                    function isNumeric(value) { return /^\d+$/.test(value); }
+                </script>
+
+
+
+
+                <hr class="my-3">
+                현재입찰가
+                <div class="h4 mb-3" style="color:red" id="currentBidPrice" th:text="${biditem.bidNowPrice}"></div>
+                희망입찰가
+                <input type="number" class="form-control h4" id="bidNowPrice" name="bidNowPrice" th:value="${biditem.bidNowPrice}" th:min="${minPrice}" max="${biditem.maxPrice}" required>
+                <div id="priceButtons">
+                    <button type="button" class="btn btn-secondary" onclick="addBidPrice(1000)">1,000원</button>
+                    <button type="button" class="btn btn-secondary" onclick="addBidPrice(5000)">5,000원</button>
+                    <button type="button" class="btn btn-secondary" onclick="addBidPrice(10000)">10,000원</button>
+                </div>
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                        var bidNowPriceInput = document.getElementById("bidNowPrice");
+                        var currentBidPrice = document.getElementById("currentBidPrice");
+
+                        var currentBidPrice = document.getElementById("currentBidPrice");
+
+                        // 가격에 콤마 추가 함수
+                        function formatPriceWithComma(price) {
+                            return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
+                        }
+
+                        // 현재 입찰가에 콤마 추가 표시
+                        var bidNowPriceValue = parseInt(currentBidPrice.textContent.replace(/,/g, ''), 10);
+                        currentBidPrice.textContent = formatPriceWithComma(bidNowPriceValue);
+
+                        var bidNowPrice = parseInt(document.getElementById("bidNowPrice").value, 10);
+                        var priceButtonsDiv = document.getElementById("priceButtons");
+
+                        if (bidNowPrice >= 50000) {
+                            var btn50000 = document.createElement("button");
+                            btn50000.type = "button";
+                            btn50000.className = "btn btn-secondary";
+                            btn50000.onclick = function() { addBidPrice(50000); };
+                            btn50000.textContent = "50,000원";
+                            priceButtonsDiv.appendChild(btn50000);
+                        }
+                        if (bidNowPrice >= 100000) {
+                            var btn100000 = document.createElement("button");
+                            btn100000.type = "button";
+                            btn100000.className = "btn btn-secondary";
+                            btn100000.onclick = function() { addBidPrice(100000); };
+                            btn100000.textContent = "100,000원";
+                            btn100000.style.marginLeft = "5px";
+                            priceButtonsDiv.appendChild(btn100000);
+                        }
+                    });
+
+                    function addBidPrice(price) {
+                        var bidNowPriceInput = document.getElementById("bidNowPrice");
+                        var currentPrice = parseInt(bidNowPriceInput.value, 10);
+                        bidNowPriceInput.value = currentPrice + price;
+                    }
+                </script>
+
+
+
+
+                <input type="hidden" id="minPrice" th:value="${minPrice}">
+                <hr class="my-3">
+                즉시구매가 <div class="h4" id="formattedMaxPrice" th:text="${biditem.maxPrice}"></div>
+
+                <input type="hidden" id="buyNowPrice" th:value="${biditem.maxPrice}">
+
+
+                <h3 class="card-title text-danger" th:attr="data-enddate=${biditem.bidEndDate}"></h3>
+                남은시간<p th:id="'remainingTime-' + ${biditem.bidItemId}">남은 시간 계산 중...</p>
+
+
+
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+
+                        const endDateElement = document.querySelector('.card-title.text-danger');
+                        const endDateStr = endDateElement.getAttribute('data-enddate');
+                        const endDate = new Date(endDateStr);
+                        const remainingTimeElement = document.querySelector('p[id^="remainingTime-"]');
+
+                        var maxPriceElement = document.getElementById('formattedMaxPrice');
+                        var maxPrice = parseInt(maxPriceElement.textContent, 10); //
+                        maxPriceElement.textContent = maxPrice.toLocaleString('ko-KR') + '원';
+
+                        function updateRemainingTime() {
+                            const now = new Date();
+                            const timeDiff = endDate - now;
+
+                            if (timeDiff <= 0) {
+                                remainingTimeElement.textContent = '경매 종료';
+                                return;
+                            }
+
+                            const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                            const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                            const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+                            const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+                            remainingTimeElement.textContent = `${days}일 ${hours}시간 ${minutes}분 ${seconds}초 남음`;
+
+                            if (timeDiff <= 1000 * 60 * 60 * 24) {
+                                remainingTimeElement.style.color = 'red';
+                            }
+                        }
+
+                        updateRemainingTime();
+                        setInterval(updateRemainingTime, 1000);
+                    });
+                </script>
+                시작기한
+                <div id="formattedStartDate" th:text="${biditem.bidStartDate}" style="margin-bottom:10px;"></div>
+
+                마감기한
+                <div id="formattedEndDate" th:text="${biditem.bidEndDate}" style="margin-bottom:10px;"></div>
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                        const bidEndDateStr = "[[${biditem.bidEndDate}]]";
+                        const bidStartDateStr = "[[${biditem.bidStartDate}]]";
+                        const bidEndDate = new Date(bidEndDateStr);
+                        const bidStartDate = new Date(bidStartDateStr);
+
+
+                        const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+                        const formattedEndDate = new Intl.DateTimeFormat('ko-KR', options).format(bidEndDate);
+                        const formattedStartDate = new Intl.DateTimeFormat('ko-KR', options).format(bidStartDate);
+                        const startDateElement = document.getElementById('formattedStartDate');
+
+
+                        document.getElementById('formattedEndDate').textContent = formattedEndDate;
+                        document.getElementById('formattedStartDate').textContent = formattedStartDate;
+
+                        const today = new Date();
+                        today.setHours(0,0,0,0);
+
+                        if (bidStartDate > today) { startDateElement.style.color = 'red'; }
+                    });
+                </script>
+
+                판매자 <span id="sellerInfo" style="font-weight:bold" th:text="${biditem.memberId}">
+                        </span>
+
+                <div id="sellerEmail" style="display:none;" th:text="${biditem.email}"></div>
+
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                    const sellerInfoElement = document.getElementById('sellerInfo');
+                    const sellerEmailElement = document.getElementById('sellerEmail');
+                   if (isNumeric(sellerInfoElement.textContent) || sellerInfoElement.textContent.length >= 30) {
+                   sellerInfoElement.textContent = sellerEmailElement.textContent;
+                   }
+                    });
+                    function isNumeric(value) { return /^\d+$/.test(value); }
+                </script>
+                <img style="width:20px;" th:if="${biditem.mgst != null and biditem.mgst == 'NORMAL'}" th:src="@{/images/bronze.png}" alt="Normal" />
+                <img style="width:20px;" th:if="${biditem.mgst != null and biditem.mgst == 'SILVER'}" th:src="@{/images/silver.png}" alt="silver" />
+                <img style="width:20px;" th:if="${biditem.mgst != null and biditem.mgst == 'GOLD'}" th:src="@{/images/gold.png}" alt="gold" />
+                <img style="width:20px;" th:if="${biditem.mgst != null and biditem.mgst == 'VIP'}" th:src="@{/images/vip.png}" alt="vip" />
+                <img style="width:20px;" th:if="${biditem.mgst != null and biditem.mgst == 'VVIP'}" th:src="@{/images/vvip.png}" alt="vvip" />
+            </div>
+        </div>
+
+    <!-- 입찰 버튼 표시 조건 -->
+    <div th:if="${biditem.itemStatus == 'ING'}" class="text-right">
+        <button type="button" class="btn btn-light border border-primary btn-lg" id="bidButton" sec:authorize="isAuthenticated()">입찰하기</button>
+        <button type="button" class="btn btn-primary btn-lg" sec:authorize="isAuthenticated()" onclick="onClickBuyNow()">즉시구매</button>
+        <script>
+            function onClickBuyNow() {
+                var csrfToken = $('meta[name="_csrf"]').attr('content');
+                var csrfHeader = $('meta[name="_csrf_header"]').attr('content');
+                var bidItemId = $('#biditemId').val();
+                var bidNowPrice = document.getElementById('buyNowPrice').value;
+                var currentBidPrice = parseInt($('#bidNowPrice').val(), 10);
+
+                // 즉시구매가가 현재 입찰가보다 낮을 경우
+                if (bidNowPrice < currentBidPrice) {
+                    alert('현재 입찰가보다 즉시구매가 낮습니다. 즉시구매가 불가합니다.');
+                    return; // 페이지 이동 막기
+                }
+                $.ajax({
+                    url: '/biditem/placeBid',
+                    type: 'POST',
+                    contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+                    dataType: 'text',
+                    data: {
+                        bidNowPrice: bidNowPrice,
+                        bidItemId: bidItemId,
+                        buyNowCheck: 'Y'
+                    },
+                    beforeSend: function(xhr) {
+                        xhr.setRequestHeader(csrfHeader, csrfToken);
+                    },
+                    success: function(result, response) {
+                        var orderId = result;
+                        // 팝업 창의 크기 설정
+                        var width = 1000;
+                        var height = 700;
+
+                        // 브라우저 창의 내부 크기를 기준으로 중앙 위치 계산
+                        var left = (window.innerWidth - width) / 2 + window.screenX;
+                        var top = (window.innerHeight - height) / 2 + window.screenY;
+
+                        // 새 창으로 결제 페이지 열기 (중앙 위치 설정)
+                        var paymentWindow = window.open(
+                            '/payments/paymentP?orderId=' + orderId,
+                            'paymentPopup',
+                            'width=' + width + ',height=' + height + ',left=' + left + ',top=' + top + ',scrollbars=yes,resizable=yes'
+                        );
+
+<!--                        var responseText = JSON.stringify(response);-->
+<!--                        console.log('response: ' + responseText);-->
+<!--                        alert('즉시구매 성공');-->
+<!--                        location.reload();-->
+                    },
+                    error: function(error) {
+                        console.log('error: ' + JSON.stringify(error));
+                        alert('즉시 구매 실패');
+                    }
+                });
+            }
+        </script>
+<!--        <div sec:authorize="isAuthenticated()">-->
+<!--            <div th:if="${#authentication.getPrincipal()?.username == biditem.memberId}">-->
+<!--                <a th:href="@{/biditem/edit/{id}(id=${biditem.bidItemId})}" class="btn btn-primary btn-lg">경매 수정하기</a>-->
+<!--            </div>-->
+<!--        </div>-->
+    </div>
+    <div th:if="${biditem.itemStatus == 'WAIT'}" class="text-right">
+        <div sec:authorize="isAuthenticated()">
+<!--            <div th:if="${#authentication.getPrincipal()?.username == biditem.memberId}">-->
+<!--&lt;!&ndash;                <a th:href="@{/biditem/edit/{id}(id=${biditem.bidItemId})}" class="btn btn-primary btn-lg">경매 수정하기</a>&ndash;&gt;-->
+<!--                <button type="button" class="btn btn-primary btn-lg" id="cancelAuctionButton">경매 취소하기</button>-->
+<!--            </div>-->
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            var csrfToken = $('meta[name="_csrf"]').attr('content');
+            var csrfHeader = $('meta[name="_csrf_header"]').attr('content');
+
+            $('#bidButton').click(function() {
+                var bidNowPrice = parseInt($('#bidNowPrice').val(), 10);
+                var minPrice = parseFloat($('#minPrice').val());
+                var currentPrice = minPrice - 1;
+                var bidItemId = $('#biditemId').val();
+
+                console.log('bidNowPrice: ' + bidNowPrice + ', minPrice: ' + minPrice + ', currentPrice: ' + currentPrice + ', bidItemId: ' + bidItemId);
+
+                if (bidNowPrice > currentPrice) {
+                    $.ajax({
+                        url: '/biditem/placeBid',
+                        type: 'POST',
+                        contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+                        dataType: 'text',
+                        data: {
+                            bidNowPrice: bidNowPrice,
+                            bidItemId: bidItemId,
+                             buyNowCheck : 'N'
+
+                        },
+                        beforeSend: function(xhr) {
+                            xhr.setRequestHeader(csrfHeader, csrfToken);
+                        },
+                        success: function(response) {
+                            var responseText = JSON.stringify(response);
+                            console.log('response: ' + responseText);
+                            alert('입찰이 완료되었습니다.');
+                            location.reload();
+                        },
+                        error: function(error) {
+                            console.log('error: ' + JSON.stringify(error));
+                            alert(error.responseText);
+                        }
+                    });
+                } else {
+                    alert('새로운 입찰가는 현재 입찰가보다 커야 합니다.');
+                }
+            });
+
+            $('#cancelAuctionButton').click(function() {
+                var bidItemId = $('#biditemId').val();
+                console.log('Cancel Auction: Bid Item ID:', bidItemId);
+
+                $.ajax({
+                    url: '/biditem/cancel',
+                    type: 'POST',
+                    contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+                    data: { bidItemId: bidItemId },
+                    beforeSend: function(xhr) {
+                        xhr.setRequestHeader(csrfHeader, csrfToken);
+                    },
+                    success: function(response) {
+                        console.log('response: ' + response);
+                        alert('경매가 취소되었습니다.');
+                        window.location.href = '/biditem/list';
+                    },
+                    error: function(xhr, status, error) {
+                        console.log('Status:', status);
+                        console.log('Error:', error);
+                        console.log('ResponseText:', xhr.responseText);
+                        alert('로그인 후 이용가능합니다.');
+                        window.location.href = '/members/login';
+                    }
+                });
+            });
+        });
+    </script>
+
+
+    <!-- 경매 대기중 버튼 -->
+    <div th:if="${biditem.itemStatus == 'WAIT'}" class="text-right">
+        <button type="button" class="btn btn-warning btn-lg">경매대기중</button>
+    </div>
+    <!-- 경매 종료 버튼 -->
+    <div th:if="${biditem.itemStatus != 'ING' and biditem.itemStatus != 'WAIT'}" class="text-right">
+        <button type="button" class="btn btn-danger btn-lg">경매종료</button>
+    </div>
+    <div class="text-right" style="margin-top:10px;">
+        <button type="button" class="btn btn-success btn-lg" th:onclick="'location.href=\'/biditem/list\''">목록으로 돌아가기</button>
+    </div>
+
+    <div>
+        <hr class="my-4">
+        <div class="itemDesc-container" style="margin: 0 auto; width:90%">
+            <h4>상품상세설명</h4>
+            <p style="white-space: pre-wrap; margin-top:30px" th:text="${biditem.bidItemDesc}"></p>
+        </div>
+    </div>
+
+    <div th:if="${biditem.biditemImgDtoList != null and #lists.size(biditem.biditemImgDtoList) > 0}" class="text-center">
+        <div th:each="itemImg, iterStat : ${biditem.biditemImgDtoList}">
+            <div th:if="${iterStat.index < 5}">
+                <img th:if="${itemImg.imgUrl != null}" th:src="${itemImg.imgUrl}" class="rounded mgb-15" width="90%" style="margin-bottom:50px">
+            </div>
+        </div>
+    </div>
+
+    </div>
+    <script>
+        $(".img").each(function () {
+            const zoomFactor = $(this).find('img').data('zoom') || 3; // data-zoom 속성에서 확대 배율 가져오기
+            const imageTarget = $(this).find('img'); // 대상 이미지
+            const magnifierDiv = $(this).find('.magnifier'); // 돋보기 요소
+
+            // 돋보기 크기를 늘리기 (예: width와 height를 150px로 설정)
+            const magnifierSize = 250;  // 돋보기의 크기
+            magnifierDiv.css({
+                "width": `${magnifierSize}px`,
+                "height": `${magnifierSize}px`
+            });
+
+            // 확대 효과 함수 정의
+            function magnify(e) {
+                const mousePosX = e.pageX - $(this).offset().left; // 마우스 X 좌표
+                const mousePosY = e.pageY - $(this).offset().top; // 마우스 Y 좌표
+
+                // 마우스가 이미지 영역 안에 있는지 확인
+                if (mousePosX < $(this).width() && mousePosY < $(this).height() && mousePosX > 0 && mousePosY > 0) {
+                    magnifierDiv.fadeIn(100); // 돋보기 표시
+                } else {
+                    magnifierDiv.fadeOut(100); // 돋보기 숨기기
+                    magnifierDiv.css("background-image", "none"); // 배경 이미지 숨기기
+                    return; // 이미지 바깥으로 나갔을 때는 더 이상 처리하지 않음
+                }
+
+                // 돋보기가 보일 때 위치와 배경을 업데이트
+                if (magnifierDiv.is(":visible")) {
+                    const bgPosX = -(mousePosX * zoomFactor - magnifierDiv.width() / 2);
+                    const bgPosY = -(mousePosY * zoomFactor - magnifierDiv.height() / 2);
+                    const magnifierPosX = mousePosX - magnifierDiv.width() / 2;
+                    const magnifierPosY = mousePosY - magnifierDiv.height() / 2;
+
+                    magnifierDiv.css({
+                        "left": magnifierPosX,
+                        "top": magnifierPosY,
+                        "background-image": `url('${imageTarget.attr("src")}')`, // 배경 이미지 설정
+                        "background-repeat": "no-repeat",
+                        "background-size": `${imageTarget.width() * zoomFactor}px ${imageTarget.height() * zoomFactor}px`, // 배경 크기 설정
+                        "background-position": `${bgPosX}px ${bgPosY}px`
+                    });
+                }
+            }
+
+            // 이미지에 mousemove 이벤트 핸들러 연결
+            $(this).on('mousemove', magnify);
+        });
+    </script>
+</div>
+</html>

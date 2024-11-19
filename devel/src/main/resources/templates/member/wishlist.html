@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layouts/layout2}">
+
+
+<head>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/min/moment.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+    <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+</head>
+
+<!-- 사용자 CSS 추가 -->
+<th:block layout:fragment="css">
+    <style>
+        .flex-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .table-container {
+            flex: 1;
+        }
+        .table {
+            width: 100%;
+        }
+        .table thead {
+            background-color: #E9ECEF;
+        }
+        .table-striped tbody tr:hover {
+            background-color: lightgray !important; /* 모든 행에 동일하게 hover 색상 적용 */
+            cursor: pointer;
+        }
+        .table-striped tbody tr:nth-child(even) {
+            background-color: #F9F9F9;
+        }
+        .table td, .table th {
+            vertical-align: middle;
+            text-align: center;
+        }
+
+        /* 상품명 스타일 */
+        .table td.product-name {
+            white-space: nowrap; /* 한 줄로 유지 */
+            overflow: hidden;
+            text-overflow: ellipsis; /* 넘칠 때 생략 부호 */
+            max-width: 200px; /* 최대 너비 설정 */
+        }
+    </style>
+</th:block>
+
+<div layout:fragment="content" style="margin-left: 25%; margin-right: 25%;">
+    <script>
+        $(document).ready(function() {
+            // 경매 아이템 클릭 이벤트
+            $(document).on('click', '#bidItemTable tbody tr', function() {
+                var bidItemId = $(this).find('.bid-item-id').val();
+                if (bidItemId) {  // 값이 있는지 확인
+                    window.location.href = '/biditem/view/' + bidItemId;
+                }
+            });
+
+            // 일반 아이템 클릭 이벤트
+            $(document).on('click', '#itemTable tbody tr', function() {
+                var itemId = $(this).find('.item-id').val();
+                if (itemId) {  // 값이 있는지 확인
+                    window.location.href = '/item/' + itemId;
+                }
+            });
+            // 금액에 콤마 추가
+            $('.price, .bid-price').each(function() {
+                var priceText = $(this).text();
+                var formattedPrice = parseInt(priceText, 10).toLocaleString();
+                $(this).text(formattedPrice + '원');
+            });
+        });
+    </script>
+
+    <h2><i class="fas fa-heart red" style="color:red;"></i> 관심상품</h2>
+
+    <!-- 좌우로 나뉜 테이블 컨테이너 -->
+    <div class="flex-container">
+        <!-- 일반 아이템 테이블 -->
+        <div class="table-container">
+            <h3>일반상품</h3>
+            <table id="itemTable" class="table table-striped">
+                <thead>
+                <tr>
+                    <th scope="col">상품명</th>
+                    <th scope="col">판매상태</th>
+                    <th scope="col">가격</th>
+                    <th scope="col">재고수량</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="wishlist : ${wishlist}" th:if="${wishlist.itemId != null}">
+                    <td class="product-name" th:text="${wishlist.itemNm}"></td>
+                    <td th:text="${wishlist.iSellStatus == 'SELL' ? '판매중' : (wishlist.iSellStatus == 'SOLD_OUT' ? '품절' : '')}"></td>
+                    <td class="price" th:text="${wishlist.price}"></td>
+                    <td th:text="${wishlist.stockNumber}"></td>
+                    <input type="hidden" class="item-id" th:value="${wishlist.itemId}"/>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <!-- 경매 아이템 테이블 -->
+        <div class="table-container">
+            <h3>경매상품</h3>
+            <table id="bidItemTable" class="table table-striped">
+                <thead>
+                <tr>
+                    <th scope="col">상품명</th>
+                    <th scope="col">판매상태</th>
+                    <th scope="col">현재가</th>
+                    <th scope="col">즉시구매가</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="wishlist : ${wishlist}" th:if="${wishlist.itemId == null}">
+                    <td class="product-name" th:text="${wishlist.bidItemName}"></td>
+                    <td th:text="${wishlist.itemStatus == 'WAIT' ? '경매대기중' : (wishlist.itemStatus == 'ING' ? '경매중' : '경매종료')}"></td>
+                    <td class="bid-price" th:text="${wishlist.bidNowPrice}"></td>
+                    <td class="bid-price" th:text="${wishlist.maxPrice}"></td>
+                    <input type="hidden" class="bid-item-id" th:value="${wishlist.bidItemId}"/>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</html>

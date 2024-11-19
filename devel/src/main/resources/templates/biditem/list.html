@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/layout2}">
+
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+
+<!-- 사용자 CSS 추가 -->
+<th:block layout:fragment="css">
+    <style>
+        .carousel-inner > .carousel-item {
+            height: 250px;
+        }
+        .margin{
+            margin-bottom:30px;
+        }
+        .banner{
+            height: 250px;
+            position: absolute; top:0; left: 0;
+            width: 100%;
+            object-fit: cover; /* 비율 유지 */
+        }
+        .card-text{
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+            margin:0 !important;
+        }
+        a:hover{
+            text-decoration:none;
+        }
+        .center{
+            text-align:center;
+        }
+        .pagination .page-link {
+            color: black;
+            background-color: transparent;
+            border: none;
+            border-radius: 50%;
+            width: 30px; /* 버튼의 너비 고정 */
+            height: 30px; /* 버튼의 높이 고정 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0; /* 패딩 제거 */
+            margin: 0 2px; /* 좌우 간격을 위한 약간의 마진 */
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: black; /* 활성화된 페이지 배경 색상 */
+            color: white; /* 활성화된 페이지 텍스트 색상 */
+            border-radius: 6px; /* 약간 둥근 모서리 */
+        }
+
+        .pagination .page-link:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+            color: black;
+            border-radius: 6px; /* 네모 유지 */
+        }
+
+        .pagination .page-link:focus {
+            box-shadow: none; /* 포커스 시 기본 강조 제거 */
+        }
+
+        /* < > 화살표에도 동일한 스타일 적용 */
+        .pagination .page-item .page-link {
+            padding: 6px 10px;
+        }
+
+        .category-btn {
+            width: 160px;
+            height: 160px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 18px;
+            background: radial-gradient(circle at 30% 30%, #fafafa, #cfcfcf);
+            color: black;
+            border: 3px solid #e0e0e0;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease, border-color 0.5s ease; /* border-color 전환 추가 */
+            box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.5),
+                        inset -1px -1px 4px rgba(255, 255, 255, 1);
+            animation: glass-shine 3s infinite;
+            animation-play-state: running; /* 기본 상태에서 애니메이션 실행 */
+        }
+
+       /* 유리 광택 효과 */
+        .category-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 80%;
+            height: 80%;
+            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.9), transparent 60%); /* 중심만 밝게 */
+            transform: translate(-50%, -50%) rotate(-45deg);
+            opacity: 0.9;
+            animation: shine 3s infinite ease-in-out;
+            transition: opacity 0.3s;
+        }
+
+        /* 더욱 강한 호버 효과 */
+        .category-btn:hover {
+            background: white;
+            border: 3px solid black;
+            transform: translateY(-5px);
+            box-shadow: 0px 0px 3px rgba(0, 0, 0, 0.6),
+                        inset -2px -2px 6px rgba(255, 255, 255, 1);
+        }
+
+        /* 기본 상태에서 유리 반짝임 애니메이션 */
+        @keyframes glass-shine {
+            0%, 100% { box-shadow: 8px 20px rgba(0, 0, 0, 0.2), inset -10px -10px 20px rgba(255, 255, 255, 1); }
+            50% { box-shadow: 12px 25px rgba(0, 0, 0, 0.25), inset -12px -12px 25px rgba(255, 255, 255, 1); }
+        }
+
+        /* 광택 애니메이션 */
+        @keyframes shine {
+            0% { transform: translate(-100%, -100%) rotate(-45deg); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translate(100%, 100%) rotate(-45deg); opacity: 0; }
+        }
+
+        .scroll-button-container {
+            position: fixed;
+            top: 50%;
+            right: 50px;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .scroll-button {
+            background-color: #5D98D6;
+            color: white;
+            border: none;
+            width: 57px;
+            height: 57px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            outline: none;
+        }
+
+        .scroll-button:hover {
+            background-color: #0056b3;
+        }
+
+        .scroll-button:focus {
+            outline: none;
+        }
+
+        .scroll-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+            line-height: 1.2;
+        }
+        .wishlist-container img {
+            transition: filter 0.3s ease;
+        }
+        .wishlist-container img:hover {
+            filter: grayscale(100%);
+        }
+        .wishlist-container li{
+            transition:transform 0.3s ease;
+        }
+        .wishlist-container li:hover{
+            transform: translateY(-5px);
+        }
+
+        .link-hover h6 {
+            transition: color 0.3s ease, transform 0.3s ease;
+            text-align: center;
+            display: block;
+            color: gray;
+        }
+
+        .link-hover:hover h6 {
+            color: black;
+            transform: translateY(-5px);
+        }
+        .link-hover {
+            text-decoration: none !important; /* 링크에 강제 밑줄 제거 */
+        }
+        .heart-icon {
+            position: absolute;
+            top: 270px; /* 카드 상단으로 고정 */
+            right: -20px;
+            font-size: 50px;
+            color: red;
+            transition: color 0.3s;
+            z-index: 1000;
+        }
+        .main-img {
+            transition: transform 0.3s ease;
+        }
+
+        .main-img:hover {
+            transform: scale(1.05); /* 1.05배 확대 */
+        }
+
+        .announcement-bar {
+            width: 100%;
+            overflow: hidden;
+            background-color: #f8e6e6; /* 연한 빨간 회색 */
+            border-top: 1px solid #e0b0b0; /* 더 짙은 빨간 회색 테두리 */
+            font-size: 1em;
+            font-weight: 500;
+            color: #333;
+            display: flex;
+            align-items: center;
+            height: 60px;
+        }
+
+        .announcement-content {
+            display: flex;
+            animation: scrollContinuous 30s linear infinite; /* 더 긴 애니메이션 시간 */
+        }
+
+        .announcement-section {
+            padding: 10px 20px;
+            white-space: nowrap;
+        }
+
+        .announcement-section.short {
+            flex: 0 0 8%;
+            font-weight: bold;
+            color: #007bff;
+            text-align:right;
+        }
+
+        .announcement-section:not(.short) {
+            flex: 1 1 25%;
+            text-align: center;
+        }
+
+        /* 자연스럽게 이어지는 무한 슬라이드 애니메이션 */
+        @keyframes scrollContinuous {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); } /* 절반까지 이동하면 반복 시작 */
+        }
+    </style>
+</th:block>
+
+<div layout:fragment="content">
+
+    <div id="carouselControls" class="carousel slide margin" data-ride="carousel" data-interval="2800">
+        <div class="carousel-inner">
+            <div class="carousel-item active item">
+                <!--                <a class="nav-link" href="/?cid=화장품">-->
+                <a class="nav-link" href="/">
+                    <img class="d-block w-100 banner" src="/images/banner4.png" alt="First slide">
+                </a>
+            </div>
+            <div class="carousel-item">
+                <a class="nav-link" href="/">
+                    <img class="d-block w-100 banner" src="/images/banner2.png" alt="Second slide">
+                </a>
+            </div>
+            <div class="carousel-item">
+                <a class="nav-link" href="/">
+                    <img class="d-block w-100 banner" src="/images/banner3.png" alt="Third slide">
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="announcement-bar">
+        <div class="announcement-content">
+            <div class="announcement-section short">[ 공지 ]</div>
+            <div class="announcement-section">멤버십 등급 및 포인트 적립 안내</div>
+            <div class="announcement-section">고객센터 운영시간 변경 안내</div>
+            <div class="announcement-section">신규 기능 (경매) 추가 안내</div>
+            <!-- 동일한 공지사항 반복 -->
+            <div class="announcement-section short">[ 공지 ]</div>
+            <div class="announcement-section">멤버십 등급 및 포인트 적립 안내</div>
+            <div class="announcement-section">고객센터 운영시간 변경 안내</div>
+            <div class="announcement-section">신규 기능 (경매) 추가 안내</div>
+        </div>
+    </div>
+    <!--    <input type="hidden" name="searchQuery" th:value="${itemSearchDto.searchQuery}">-->
+    <!--    <div th:if="${not #strings.isEmpty(itemSearchDto.searchQuery)}" class="center">-->
+    <!--        <p class="h3 font-weight-bold" th:text="${itemSearchDto.searchQuery} + '검색 결과'"></p>-->
+    <!--    </div>-->
+
+    <div class="container">
+        <h2 class="text-center" style="margin-top:50px">카테고리</h2>
+
+        <!-- 카테고리 버튼 컨테이너 -->
+        <div class="d-flex flex-wrap justify-content-center" style="max-width: 900px; margin: 40px auto 50px auto; gap: 10px; letter-spacing:1.5px; font-weight:500">
+            <div class="d-flex justify-content-center mb-3" style="flex: 0 0 calc(20% - 10px);">
+                <a th:href="@{/biditem/list(auctionStatus=${auctionStatus})}" class="btn rounded-circle category-btn" data-cid="">전체보기</a>
+            </div>
+            <div th:each="category, stat : ${categories}" th:if="${stat.index < 4}" class="d-flex justify-content-center mb-3" style="flex: 0 0 calc(20% - 10px);">
+                <a th:href="@{/biditem/list(cid=${category.cid}, auctionStatus=${auctionStatus})}"
+                   class="btn rounded-circle category-btn"
+                   data-cid="${category.cid}"
+                   th:text="${category.cname}">카테고리</a>
+            </div>
+            <div th:each="category, stat : ${categories}" th:if="${stat.index >= 4 && stat.index < 9}" class="d-flex justify-content-center mb-3" style="flex: 0 0 calc(20% - 10px);">
+                <a th:href="@{/biditem/list(cid=${category.cid}, auctionStatus=${auctionStatus})}" class="btn rounded-circle category-btn" th:text="${category.cname}">카테고리</a>
+            </div>
+        </div>
+
+    </div>
+    <div class="scroll-button-container">
+        <div class="wishlist-container mb-3" th:if="${#authorization.expression('isAuthenticated()')}">
+            <a href="/members/wishlist" class="scroll-label link-hover">
+                <h6><i class="fas fa-heart" style="color:red;"></i> 관심상품</h6>
+            </a>
+            <ul style="list-style-type: none; padding: 0;">
+                <!-- 관심 상품이 있는 경우 목록을 출력 -->
+                <li th:if="${not #lists.isEmpty(recentBidWishlist)}" th:each="wishlistItem : ${recentBidWishlist}" style="margin-bottom: 15px;">
+                    <a th:href="'/biditem/view/' + ${wishlistItem.BidItemId}" class="text-dark d-flex flex-column align-items-center" style="text-decoration: none !important;">
+                        <img th:src="${wishlistItem.imgUrl}" style="width: 95px; height: 95px; object-fit: contain; object-position: center; margin-bottom: 5px; border:1px solid lightgray; border-radius:10px;">
+                        <span th:text="${wishlistItem.BidItemName}" style="font-size: 14px; overflow: hidden; text-overflow: ellipsis; text-align: left; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; width: 100px; line-height: 1.3em; max-height: 2.6em;"></span>
+                    </a>
+                </li>
+
+                <!-- 관심 상품이 없을 경우 표시할 메시지 -->
+                <li th:if="${#lists.isEmpty(recentBidWishlist)}" class="text-center" style="color: gray; font-size: 14px; margin-top:10px;">
+                    현재 관심상품이 <br>없습니다.
+                </li>
+            </ul>
+
+        </div>
+        <!-- 로그인하지 않은 상태에서는 공간을 남겨두기 -->
+        <div th:if="${!#authorization.expression('isAuthenticated()')}" style="visibility: hidden; height: 450px;"></div>
+        <button class="scroll-button" onclick="scrollToHeader()">
+            <div class="scroll-label">
+                UP<br>
+                <i class="fas fa-chevron-up"></i>
+            </div>
+        </button>
+
+        <!-- Scroll Down Button -->
+        <button class="scroll-button" onclick="scrollToFooter()">
+            <div class="scroll-label">
+                <i class="fas fa-chevron-down"></i>
+                DOWN<br>
+            </div>
+        </button>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const priceElements = document.querySelectorAll('[id^="currentPrice-"]');
+            priceElements.forEach(function(priceElement) {
+                const priceValue = priceElement.textContent;
+                const formattedPrice = Number(priceValue).toLocaleString();
+                priceElement.textContent = formattedPrice;
+            });
+        });
+
+        function changeAuctionStatus() {
+             const auctionStatus = document.getElementById("auctionStatus").value;
+             const cid = document.querySelector('.category-btn.active') ? document.querySelector('.category-btn.active').dataset.cid : '';
+             window.location.href = `/biditem/list?auctionStatus=${auctionStatus}&cid=${cid}`;
+         }
+
+         function changeCategory(cid) {
+             const auctionStatus = document.getElementById("auctionStatus").value;
+             window.location.href = `/biditem/list?auctionStatus=${auctionStatus}&cid=${cid}`;
+         }
+        function scrollToHeader() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function scrollToFooter() {
+            document.querySelector('.footer').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+
+    <form id="auctionForm" action="/biditem/list" method="GET">
+
+        <select id="auctionStatus" name="auctionStatus" onchange="changeAuctionStatus()"
+                style="display: inline-block; text-align: center; text-align-last: center;
+                   vertical-align: middle; height: 40px; padding: 5px 0;
+                   font-size: 16px; color: #333;
+                   border: 2px solid #ddd; border-radius: 8px; box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+                   transition: border-color 0.3s ease, box-shadow 0.3s ease; margin-bottom:10px;">
+            <option value="" style="color: #888;"> -- 경매상태 -- </option>
+            <option value="WAIT" th:selected="${auctionStatus == 'WAIT'}">경매대기중</option>
+            <option value="ING" th:selected="${auctionStatus == 'ING'}">경매중</option>
+            <option value="END" th:selected="${auctionStatus == 'END'}">경매종료</option>
+        </select>
+
+    </form>
+
+
+
+
+    <div class="row">
+        <th:block th:each="item, status: ${bidItemList}">
+            <div class="col margin" style="flex: 0 0 20%; max-width: 20%;">
+                <div class="card" style="border:none;">
+                    <!-- 관심 상품일 경우 하트 아이콘 표시 -->
+                    <i class="heart-icon fas fa-heart" th:if="${item.wishlisted}"></i>
+                    <a th:href="'/biditem/view/' + ${item.bidItemId}" class="text-dark main-img">
+                        <img th:src="${item.bidImgUrl}" class="card-img-top" style="height: 300px; width: 100%; object-fit: contain; object-position: center; border:1px solid lightgray; border-radius:10px;">
+                    </a>
+                    <div class="card-body">
+
+                        <span class="card-text;">
+                            <span class="badge badge-warning" th:if="${item.itemStatus eq 'WAIT'}">경매대기중</span>
+                            <span class="badge badge-primary" th:if="${item.itemStatus eq 'ING'}">경매중</span>
+                            <span class="badge btn-danger" th:if="${item.itemStatus eq 'END'}">경매종료</span>
+                            <span class="badge btn-danger" th:if="${item.itemStatus ne 'WAIT' and item.itemStatus ne 'ING' and item.itemStatus ne 'END'}">알 수 없음</span>
+                        </span><br>
+
+                        <span class="card-title" style="font-size:18px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; max-width: 100%; margin-bottom: 0; height: 44px; line-height: 1.3em;">[[${item.bidItemName}]]</span><br>
+                        <span class="card-title" style="font-size:16px">
+                            현재가 : <span id="currentPrice-[[${item.bidItemId}]]">[[${item.bidNowPrice}]]</span>원
+                        </span><br>
+                        <span class="card-title" style="font-size:16px">입찰횟수 : [[${item.bidCount-1}]]</span><br>
+                        <span class="card-title text-danger" style="font-size:10px" th:attr="data-enddate=${item.bidEndDate}"></span>
+                        <p style="font-size:16px; margin-bottom:0 !important" th:id="'remainingTime-' + ${item.bidItemId}" th:data-status="${item.itemStatus}">남은 시간 계산 중...</p>
+
+
+                        판매자 <span class="sellerInfo" style="font-weight:bold" th:text="${item.memberId}">
+                        </span>
+
+                        <div class="sellerEmail" style="display:none;" th:text="${item.email}"></div>
+
+                        <script> document.addEventListener("DOMContentLoaded", function() {
+
+                        const remainingTimeElements = document.querySelectorAll("[id^='remainingTime-']");
+                        remainingTimeElements.forEach(function(element) {
+                        // 각 요소의 data-status 값을 확인
+                        const status = element.getAttribute('data-status');
+                        if (status === 'END') {
+                        // itemStatus가 END이면 display를 none으로 설정
+                         element.style.display = 'none';
+                         }
+                         });
+
+                        const sellerInfoElements = document.querySelectorAll('.sellerInfo');
+                        const sellerEmailElements = document.querySelectorAll('.sellerEmail');
+
+                        sellerInfoElements.forEach(function(sellerInfoElement, index) {
+                            const sellerEmailElement = sellerEmailElements[index];
+                            if (isNumeric(sellerInfoElement.textContent) || sellerInfoElement.textContent.length >= 30) {
+                             console.log('조건만족'); sellerInfoElement.textContent = sellerEmailElement.textContent;
+                            }
+                            });
+                        });
+                            function isNumeric(value) { return /^\d+$/.test(value); }
+                        </script>
+
+                        <img style="width:17px;" th:if="${item.mgst != null and item.mgst == 'NORMAL'}" th:src="@{/images/bronze.png}" alt="Normal" />
+                        <img style="width:17px;" th:if="${item.mgst != null and item.mgst == 'SILVER'}" th:src="@{/images/silver.png}" alt="silver" />
+                        <img style="width:17px;" th:if="${item.mgst != null and item.mgst == 'GOLD'}" th:src="@{/images/gold.png}" alt="gold" />
+                        <img style="width:17px;" th:if="${item.mgst != null and item.mgst == 'VIP'}" th:src="@{/images/vip.png}" alt="vip" />
+                        <img style="width:17px;" th:if="${item.mgst != null and item.mgst == 'VVIP'}" th:src="@{/images/vvip.png}" alt="vvip" />
+                        </span>
+                        <script>
+                            document.addEventListener("DOMContentLoaded", function() {
+                                const cardElements = document.querySelectorAll('.card');
+                                cardElements.forEach(function(cardElement) {
+                                    const endDateElement = cardElement.querySelector('.card-title.text-danger');
+                                    const endDateStr = endDateElement.getAttribute('data-enddate');
+                                    const endDate = new Date(endDateStr);
+                                    const remainingTimeElement = cardElement.querySelector('p[id^="remainingTime-"]');
+
+                                    function updateRemainingTime() {
+                                        const now = new Date();
+                                        const timeDiff = endDate - now;
+
+                                        if (timeDiff <= 0) {
+                                            remainingTimeElement.textContent = '';
+                                            return;
+                                        }
+
+                                        const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                                        const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+                                        const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+                                        remainingTimeElement.textContent = `${days}일 ${hours}시간 ${minutes}분 ${seconds}초 남음`;
+
+                                         if (timeDiff <= 1000 * 60 * 60 * 24) {
+                                                remainingTimeElement.style.color = 'red';
+                                            }
+                                    }
+
+                                    updateRemainingTime();
+                                    setInterval(updateRemainingTime, 1000);
+                                });
+                            });
+                        </script>
+
+
+                    </div>
+                </div>
+            </div>
+        </th:block>
+    </div>
+
+
+    <!-- Pagination Controls -->
+    <div class="pagination justify-content-center mt-4">
+        <ul class="pagination">
+            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                <a class="page-link" th:href="@{/biditem/list(page=${currentPage > 0 ? currentPage - 1 : 0}, cid=${cid}, auctionStatus=${auctionStatus})}"> < </a>
+            </li>
+            <li class="page-item" th:each="pageNum : ${#numbers.sequence(0, totalPages != null ? totalPages - 1 : 0)}"
+                th:classappend="${pageNum == currentPage} ? 'active'">
+                <a class="page-link" th:href="@{/biditem/list(page=${pageNum}, cid=${cid}, auctionStatus=${auctionStatus})}" th:text="${pageNum + 1}">1</a>
+            </li>
+            <li class="page-item" th:classappend="${currentPage == (totalPages != null ? totalPages - 1 : 0)} ? 'disabled'">
+                <a class="page-link" th:href="@{/biditem/list(page=${currentPage < (totalPages != null ? totalPages - 1 : 0) ? currentPage + 1 : currentPage}, cid=${cid}, auctionStatus=${auctionStatus})}"> > </a>
+            </li>
+        </ul>
+    </div>
+
+
+
+</div>

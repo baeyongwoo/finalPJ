@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/layout1}">
+
+<head>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+</head>
+
+<!-- 사용자 스크립트 추가 -->
+<th:block layout:fragment="script">
+    <script th:inline="javascript">
+        function filterOrders(filterType) {
+            console.log("필터링 시작: " + filterType);
+
+            document.querySelectorAll('.order-wrapper').forEach(function(wrapper) {
+                // 각 주문 항목 초기화
+                wrapper.classList.remove('hidden');
+                let hasVisibleItems = false;
+
+                // 해당 wrapper 내 order-item을 필터링
+                wrapper.querySelectorAll('.order-item').forEach(function(item) {
+                    if (filterType === 'all') {
+                        item.classList.remove('hidden');
+                        hasVisibleItems = true;
+                    } else if (filterType === 'general' && item.getAttribute('order-type') === 'general') {
+                        item.classList.remove('hidden');
+                        hasVisibleItems = true;
+                    } else if (filterType === 'auction' && item.getAttribute('order-type') === 'auction') {
+                        item.classList.remove('hidden');
+                        hasVisibleItems = true;
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                });
+
+                // visible한 항목이 없으면 상위 wrapper를 숨김
+                if (!hasVisibleItems) {
+                    wrapper.classList.add('hidden');
+                }
+            });
+        }
+
+        function cancelOrder(orderId) {
+            var token = $("meta[name='_csrf']").attr("content");
+            var header = $("meta[name='_csrf_header']").attr("content");
+
+            var url = "/order/" + orderId + "/cancel";
+            var paramData = {
+                orderId: orderId
+            };
+
+            var param = JSON.stringify(paramData);
+
+            $.ajax({
+                url: url,
+                type: "POST",
+                contentType: "application/json",
+                data: param,
+                beforeSend: function(xhr) {
+                    /* 데이터를 전송하기 전에 헤더에 csrf값을 설정 */
+                    xhr.setRequestHeader(header, token);
+                },
+                dataType: "json",
+                cache: false,
+                success: function(result, status) {
+                    alert("주문이 취소 되었습니다.");
+                    location.href = '/orders/' + [[${page}]];
+                },
+                error: function(jqXHR, status, error) {
+                    if (jqXHR.status == '401') {
+                        alert('로그인 후 이용해주세요');
+                        location.href = '/members/login';
+                    } else {
+                        alert(jqXHR.responseText);
+                    }
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            // 기본 필터링: 전체보기로 설정
+            filterOrders('all');
+
+            // 가격 포맷팅 함수
+            function formatNumberWithCommas(number) {
+                return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            }
+
+            // 페이지 로드 시 모든 주문 항목 가격 포맷팅
+            $('.order-price').each(function() {
+                var price = parseInt($(this).text().replace(/[^0-9]/g, ''));
+                if (!isNaN(price)) {
+                    $(this).text(formatNumberWithCommas(price) + '원');
+                }
+            });
+        });
+        function openCenteredWindow(url) {
+            // 새 창의 가로 및 세로 크기 설정
+            const width = 1000;
+            const height = 700;
+
+            // 현재 창의 화면 크기를 기준으로 중앙 위치 계산
+            const left = (window.innerWidth / 2 + window.screenX) - (width / 2);
+            const top = (window.innerHeight / 2 + window.screenY) - (height / 2);
+
+            // 중앙에 위치한 새 창 열기
+            window.open(url, '_blank', `width=${width},height=${height},top=${top},left=${left}`);
+        }
+
+        function openRefundModal(orderId, merchantUid) {
+            // 환불 요청을 위한 모달 창을 열기
+            document.getElementById('refundModal').style.display = 'block';
+            // 모달에 주문 ID를 저장
+            document.getElementById('refundModal').setAttribute('data-order-id', orderId);
+            document.getElementById('refundModal').setAttribute('data-order-merchantUid', merchantUid);
+        }
+
+        function closeRefundModal() {
+            // 모달 창을 닫기
+            document.getElementById('refundModal').style.display = 'none';
+        }
+
+        function submitRefund() {
+            var orderId = document.getElementById('refundModal').getAttribute('data-order-id');
+            var merchantUid = document.getElementById('refundModal').getAttribute('data-order-merchantUid');
+            var reason = document.getElementById('refundReason').value;
+
+            if (!reason) {
+                alert('환불 사유를 입력해 주세요.');
+                return;
+            }
+
+            var token = $("meta[name='_csrf']").attr("content");
+            var header = $("meta[name='_csrf_header']").attr("content");
+
+            // URL 및 파라미터 설정
+            var url = "/payments/" + orderId + "/refund";  // 환불 요청 API URL
+            var paramData = {
+                reason: reason,
+                merchantUid: merchantUid
+            };
+
+            // 로그로 데이터 확인
+            console.log(`orderId: ${orderId}, reason: ${reason}, merchantUid: ${merchantUid}`);
+
+            // Ajax 요청
+            $.ajax({
+                url: url,
+                type: "POST",
+                // contentType을 "application/x-www-form-urlencoded"로 설정하여 쿼리 파라미터로 전송
+                contentType: "application/x-www-form-urlencoded",
+                data: $.param(paramData),  // 데이터를 쿼리 파라미터 형식으로 전달
+                beforeSend: function(xhr) {
+                    // CSRF 토큰 설정
+                    xhr.setRequestHeader(header, token);
+                },
+                success: function(result) {
+                    alert("환불 요청 성공: " + result);  // 성공 메시지 출력
+                    location.reload();  // 페이지 새로고침
+                },
+                error: function(jqXHR, status, error) {
+                    alert("환불 요청 실패: " + jqXHR.responseText);  // 실패 메시지 출력
+                }
+            });
+
+            // 환불 요청 후 모달 닫기
+            closeRefundModal();
+        }
+    </script>
+</th:block>
+
+<!-- 사용자 CSS 추가 -->
+<th:block layout:fragment="css">
+    <style>
+        .content {
+            width: 50%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .content h2 {
+            align-self: flex-start;
+        }
+        .repImgDiv {
+            margin: 0 15px;
+            height: auto;
+        }
+        .repImg {
+            height: 100px;
+            width: 100px;
+            object-fit: contain;
+            object-position: center;
+            border: 1px solid lightgray;
+        }
+        .card {
+            width: 800px;
+            padding: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .fs18 {
+            font-size: 18px;
+        }
+        .fs24 {
+            font-size: 24px;
+        }
+        .pagination .page-link {
+            color: black;
+            background-color: transparent;
+            border: none;
+            border-radius: 6px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 2px;
+            font-size: 1rem;
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: black;
+            color: white;
+            border-radius: 6px;
+        }
+
+        .pagination .page-link:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+            color: black;
+        }
+
+        .pagination .page-link:focus {
+            box-shadow: none;
+        }
+
+        .btn-outline-secondary {
+            color: #333;
+            background-color: white;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            padding: 0 15px;
+            height: 35px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            outline: none;
+            transform: translateY(-5px);
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: #555;
+            color: white;
+            border-color: #555;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-10px);
+        }
+
+        .btn-outline-secondary:focus {
+            outline: none;
+        }
+
+        .order-item:not(:last-child) {
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .filter-buttons {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .filter-buttons button {
+            margin: 0 5px;
+            padding: 7px 15px;
+            cursor: pointer;
+            border: none;
+            background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+            color: #333;
+            font-size: 0.9rem;
+            border-radius: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: background 0.3s, box-shadow 0.3s;
+            outline: none;
+        }
+
+        .filter-buttons button:focus {
+            outline: none; /* 포커스 스타일 제거 */
+        }
+
+        .filter-buttons button:hover {
+            background: linear-gradient(135deg, #ddd, #ccc);
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Hidden 클래스 추가 */
+        .hidden {
+            display: none !important;
+        }
+
+        #refundModal {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+        }
+
+        .modal-content-container {
+            width: 600px;
+            height: 500px;
+            padding: 40px;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10001;
+        }
+
+        .modal-content-container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: linear-gradient(135deg, #c0c0c0 15%, transparent 15%, transparent 50%, #c0c0c0 50%, #c0c0c0 65%, transparent 65%, transparent),
+                              linear-gradient(135deg, #c0c0c0 15%, transparent 15%, transparent 50%, #c0c0c0 50%, #c0c0c0 65%, transparent 65%, transparent);
+            background-size: 40px 40px;
+            opacity: 0.25; /* 패턴이 더 진하게 보이도록 */
+            z-index: -1; /* 패턴이 모달 내용 뒤에 위치하도록 설정 */
+            border-radius: 12px; /* 모달 테두리에 맞춰 모양 조정 */
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            width: 400px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</th:block>
+
+<div layout:fragment="content" class="content">
+    <h4>나의 구매내역</h4>
+    <div class="filter-buttons">
+        <button onclick="filterOrders('all')">전체보기</button>
+        <button onclick="filterOrders('general')">일반상품</button>
+        <button onclick="filterOrders('auction')">경매상품</button>
+    </div>
+
+    <div class="order-wrapper" th:each="order : ${orders.getContent()}">
+        <div class="d-flex align-self-center">
+            <h6 th:text="${order.orderDate}"></h6>
+            <div class="ml-3">
+                <th:block th:if="${order.orderStatus == T(com.treasuredigger.devel.constant.OrderStatus).ORDER}">
+
+                    <button type="button" class="btn btn-outline-secondary btn-sm" th:value="${order.orderId}" onclick="cancelOrder(this.value)">(결제 대기중)주문취소</button>
+                </th:block>
+                <th:block th:if="${order.orderStatus == T(com.treasuredigger.devel.constant.OrderStatus).CANCEL}">
+                    <h6>(취소 완료)</h6>
+                </th:block>
+                <th:block th:if="${order.orderStatus == T(com.treasuredigger.devel.constant.OrderStatus).PAYMENT_COMPLETED}">
+                    <div th:each="orderItem, iterStat : ${order.orderItemDtoList}">
+                        <th:block th:if="${orderItem != null}">
+                            <th:block th:if="${orderItem.itemId != null}">
+                                <th:block th:if="${iterStat.index == 0}">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                                            th:value="${order.orderId}"
+                                            th:data-order-merchantUid="${order.merchantUid}"
+                                            onclick="openRefundModal(this.value, this.getAttribute('data-order-merchantUid'))">
+                                        (결제 완료) 환불 요청
+                                    </button>
+                                </th:block>
+                            </th:block>
+                            <th:block th:if="${orderItem.itemId == null}">
+                                <!-- 경매상품: 결제 완료 시 환불 불가 표시 -->
+                                (결제 완료) <span style="color:red;">환불 불가</span>
+                            </th:block>
+                        </th:block>
+                    </div>
+                </th:block>
+            </div>
+
+        </div>
+
+        <!-- 환불 사유 입력 모달 -->
+        <div id="refundModal" style="display: none;">
+            <div class="modal-content-container">
+                <div class="modal-content">
+                    <h3>환불 요청</h3>
+                    <textarea id="refundReason" placeholder="환불 사유를 입력하세요." rows="4" cols="50"></textarea>
+                    <br>
+                    <div class="modal-buttons">
+                        <button type="button" class="modal-button" onclick="submitRefund()">환불 요청</button>
+                        <button type="button" class="modal-button modal-cancel" onclick="closeRefundModal()">취소</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card d-flex">
+            <div th:each="orderItem : ${order.orderItemDtoList}" class="d-flex order-item"
+                 th:attr="order-type=${orderItem.itemId != null ? 'general' : 'auction'}">
+                <div class="repImgDiv">
+                    <img th:src="${orderItem.imgUrl}" class="rounded repImg" th:alt="${orderItem.itemNm}">
+                </div>
+                <div class="align-self-center w-75">
+                    <div th:if="${orderItem.itemId != null}">
+                        <a th:if="${order.orderStatus == orderStatusOrder}"
+                           th:href="@{'/payments/paymentP?orderId=' + ${orderItem.orderId}}"
+                           style="text-decoration: none; color: inherit;"
+                           onclick="openCenteredWindow(this.href); return false;">
+                            <span style="font-size:13px;" th:text="일반상품"></span><br>
+                            <span th:text="${orderItem.itemNm}" class="fs20 font-weight-bold"></span>
+                            <div class="fs15 font-weight-bold">
+                                <span class="order-price" th:text="${orderItem.orderPrice} + '원'"></span>
+                                <span th:text="${orderItem.count} + '개'"></span><br>
+
+                                <!-- 결제 대기 중 상태일 경우 '원래 금액'과 '포인트 사용 후 결제 금액'을 숨김 -->
+                                <span th:if="${order.orderStatus != T(com.treasuredigger.devel.constant.OrderStatus).ORDER}">
+                    원래 금액 : <span th:text="${orderItem.orderPrice}*${orderItem.count} + '원'"></span><br>
+                    포인트 사용 후 결제 금액 : <span class="order-price" th:text="${order.paymentEntity.amount} + '원'"></span>
+                </span>
+                            </div>
+                        </a>
+                        <a th:unless="${order.orderStatus == orderStatusOrder}" th:href="@{'/item/' + ${orderItem.itemId}}" style="text-decoration: none; color: inherit;">
+                            <span style="font-size:13px;" th:text="일반상품"></span><br>
+                            <span th:text="${orderItem.itemNm}" class="fs20 font-weight-bold"></span>
+                            <div class="fs15 font-weight-bold">
+                                <span class="order-price" th:text="${orderItem.orderPrice} + '원'"></span>
+                                <span th:text="${orderItem.count} + '개'"></span><br>
+
+                                <!-- 결제 대기 중 상태일 경우 '원래 금액'과 '포인트 사용 후 결제 금액'을 숨김 -->
+                                <span th:if="${order.orderStatus != T(com.treasuredigger.devel.constant.OrderStatus).ORDER}">
+                    원래 금액 : <span th:text="${orderItem.orderPrice}*${orderItem.count} + '원'"></span><br>
+                    포인트 사용 후 결제 금액 : <span class="order-price" th:text="${order.paymentEntity.amount} + '원'"></span>
+                </span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div th:if="${orderItem.itemId == null}">
+                        <a th:if="${order.orderStatus == orderStatusOrder}"
+                           th:href="@{'/payments/paymentP?orderId=' + ${orderItem.orderId}}"
+                           style="text-decoration: none; color: inherit;"
+                           onclick="openCenteredWindow(this.href); return false;">
+                            <span style="font-size:13px;" th:text="경매상품"></span><br>
+                            <span th:text="${orderItem.itemNm}" class="fs20 font-weight-bold"></span>
+                            <div class="fs15 font-weight-bold">
+                                <span>이 곳을 눌러서 결제를 진행해주세요!</span>
+                            </div>
+                        </a>
+                        <a th:unless="${order.orderStatus == orderStatusOrder}" th:href="@{'/biditem/view/' + ${orderItem.bidItemId}}" style="text-decoration: none; color: inherit;">
+                            <span style="font-size:13px;" th:text="경매상품"></span><br>
+                            <span th:text="${orderItem.itemNm}" class="fs20 font-weight-bold"></span>
+                            <div class="fs15 font-weight-bold">
+                                <span class="order-price" th:text="${order.paymentEntity.amount} + '원'"></span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+</html>

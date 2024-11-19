@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/layout1}">
+<head>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <style>
+        .my-card-container {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr)); /* 각 열을 가능한 최대 폭까지 줄임 */
+            grid-template-rows: repeat(2, 1fr); /* 2개 행으로 나누기 */
+            row-gap: 80px; /* 세로 간격 유지 */
+            justify-items: center;
+            padding: 40px 80px;
+            color: #111111;
+            text-decoration: none; /* 링크의 밑줄 제거 */
+        }
+        /* 구슬 효과 스타일 */
+        .my-card {
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle at 30% 30%, #fafafa, #cfcfcf); /* 중심부터 퍼지는 색상 그라데이션 */
+            border: 3px solid #e0e0e0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2), /* 외부 그림자 */
+                        inset -10px -10px 20px rgba(255, 255, 255, 1); /* 내부 하이라이트 */
+            transition: transform 0.3s, box-shadow 0.3s ease, border-color 0.3s ease;
+            animation: shine 3s infinite ease-in-out; /* 광택 애니메이션 */
+        }
+
+        .my-card:hover {
+            transform: translateY(-10px); /* 구슬이 살짝 올라가는 효과 */
+            box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.3), /* 외부 그림자 강화 */
+                        inset -12px -12px 24px rgba(255, 255, 255, 1); /* 내부 하이라이트 강화 */
+            border-color: black; /* border가 검은색으로 부드럽게 변경 */
+            animation-play-state: paused; /* hover 시 애니메이션 일시정지 */
+        }
+
+        .my-card img {
+            position: absolute; /* 절대 위치 설정 */
+            top: 50%; /* 수직 중앙 */
+            left: 50%; /* 수평 중앙 */
+            transform: translate(-50%, -50%); /* 중앙으로 이동 */
+        }
+
+        .my-card p {
+            position: absolute; /* 절대 위치 설정 */
+            top: 100%; /* 카드 아래쪽으로 위치 */
+            left: 50%; /* 수평 중앙 */
+            font-size: 17px;
+            transform: translateX(-50%); /* 중앙으로 이동 */
+            text-align: center; /* 텍스트 중앙 정렬 */
+            margin-top: 20px; /* 원과 텍스트 사이의 간격 조정 */
+            font-weight:bold;
+            width:100%;
+        }
+
+        .my-card-container a {
+            color: #333333; /* 진한 회색 */
+            text-decoration: none; /* 링크의 밑줄 제거 */
+        }
+
+        .my-card-container a:hover {
+            color: #111111; /* 호버 시 더 진한 회색 */
+        }
+
+        @media (max-width: 768px) {
+            .my-card {
+                width: 150px;
+                height: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div layout:fragment="content" style="padding-top:180px;">
+    <div style="position: relative;" sec:authorize="isAuthenticated()">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <table>
+                <tr>
+                    <th>
+                        <img th:src="@{/images/person.png}" alt="blackLogo" class="img-fluid" style="width:50px;">
+                        <span th:text="${member.name} + '님의 마이페이지' "></span>
+                    </th>
+                </tr>
+            </table>
+
+            <div class="user" style="padding: 10px;">
+                <div style="display: flex; align-items: center;">
+                    <strong>회원 등급:</strong>
+                    <span th:text="${memberGradeStatus}"></span>
+                    <img style="width:20px;" th:if="${memberGradeStatus != null && memberGradeStatus == T(com.treasuredigger.devel.constant.MemberGradeStatus).NORMAL}" th:src="@{/images/bronze.png}" alt="Normal" />
+                    <img style="width:20px;" th:if="${memberGradeStatus != null && memberGradeStatus == T(com.treasuredigger.devel.constant.MemberGradeStatus).SILVER}" th:src="@{/images/silver.png}" alt="silver" />
+                    <img style="width:20px;" th:if="${memberGradeStatus != null && memberGradeStatus == T(com.treasuredigger.devel.constant.MemberGradeStatus).GOLD}" th:src="@{/images/gold.png}" alt="gold" />
+                    <img style="width:20px;" th:if="${memberGradeStatus != null && memberGradeStatus == T(com.treasuredigger.devel.constant.MemberGradeStatus).VIP}" th:src="@{/images/vip.png}" alt="vip" />
+                    <img style="width:20px;" th:if="${memberGradeStatus != null && memberGradeStatus == T(com.treasuredigger.devel.constant.MemberGradeStatus).VVIP}" th:src="@{/images/vvip.png}" alt="vvip" />
+                </div>
+                <!-- 두 번째 줄: 다음 등급까지 필요한 금액 -->
+                <div th:if="${amountNeeded > 0}" style="margin-top: 5px; font-size: 14px; color: #555;">
+                    <span id="amountNeeded" th:text="'다음 등급까지: ' + ${amountNeeded} + '원'"></span>
+                </div>
+            </div>
+        </div>
+
+<!--        memberUpdate.html로 옮김
+ <form th:action="@{/members/{mid}/delete(mid=${member.mid})}" method="post" style="display:inline;" onsubmit="return confirm('정말 삭제하시겠습니까?');">-->
+<!--            <button type="submit" class="btn btn-danger btn-sm" sec:authorize="isAuthenticated()">회원 탈퇴</button>-->
+<!--        </form>-->
+
+        <div class="my-card-container">
+            <a href="#" class="my-card" th:if="${member.provider != null}" th:onclick="'alert(\'소셜로그인은 정보 수정이 불가합니다.\'); return false;'">
+                <img th:src="@{/images/memberupdate.png}" alt="회원정보수정" style="width: 80px;">
+                <p>회원정보수정</p>
+            </a>
+            <a href="#" class="my-card" th:if="${member.provider == null}" th:onclick="'openPasswordCheckPopup(); return false;'">
+                <img th:src="@{/images/memberupdate.png}" alt="회원정보수정" style="width: 80px;">
+                <p>회원정보수정</p>
+            </a>
+            <a href="/orders" class="my-card">
+                <img th:src="@{/images/buy.png}" alt="구매내역" style="width: 80px;">
+                <p>구매내역</p>
+            </a>
+            <a href="/cart" class="my-card">
+                <img th:src="@{/images/cart.png}" alt="장바구니" style="width: 80px;">
+                <p>장바구니</p>
+            </a>
+            <a href="/members/wishlist" class="my-card">
+                <img th:src="@{/images/wishlist.png}" alt="관심상품" style="width: 80px;">
+                <p>관심상품</p>
+            </a>
+            <a href="#" class="my-card">
+                <img th:src="@{/images/account.png}" alt="계좌관리" style="width: 80px;">
+                <p>포인트관리</p>
+            </a>
+            <a href="/admin/items" class="my-card" sec:authorize="hasAnyAuthority('ROLE_ADMIN')">
+                <img th:src="@{/images/sell.png}" alt="일반상품관리" style="width: 80px;">
+                <p>일반상품관리</p>
+            </a>
+            <a href="/customer-service/notices" class="my-card">
+                <img th:src="@{/images/notice.png}" alt="공지사항" style="width: 80px;">
+                <p>공지사항</p>
+            </a>
+            <a href="/biditem/mybidlist" class="my-card" sec:authorize="hasAnyAuthority('ROLE_MEMBER', 'ROLE_ADMIN')">
+                <img th:src="@{/images/review.png}" alt="내가 쓴 리뷰" style="width: 80px;">
+                <p>나의 경매</p>
+            </a>
+        </div>
+    </div>
+
+    <!-- 모달 -->
+    <div class="modal" id="messageModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">알림</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p th:text="${message}"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+    </div>
+</div>
+
+<script>
+
+    $(document).ready(function() {
+        var message = /*[[${message}]]*/ '';
+        if (message) {
+            $('#messageModal').modal('show');
+        }
+    });
+</script>
+
+</body>
+</html>

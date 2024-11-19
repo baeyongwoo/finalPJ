@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layouts/layout1}">
+
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+
+<!-- 사용자 CSS 추가 -->
+<th:block layout:fragment="css">
+    <style>
+        .carousel-inner > .carousel-item {
+            height: 250px;
+        }
+        .margin{
+            margin-bottom:30px;
+        }
+        .banner{
+            height: 250px;
+            position: absolute; top:0; left: 0;
+            width: 100%;
+            object-fit: cover;
+        }
+        a:hover{
+            text-decoration:none;
+        }
+        .center{
+            text-align:center;
+        }
+
+        .category-btn {
+            width: 160px;
+            height: 160px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 18px;
+            background: radial-gradient(circle at 30% 30%, #fafafa, #cfcfcf);
+            color: black;
+            border: 3px solid #e0e0e0;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease, border-color 0.5s ease; /* border-color 전환 추가 */
+            box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.5),
+                        inset -1px -1px 4px rgba(255, 255, 255, 1);
+            animation: glass-shine 3s infinite;
+            animation-play-state: running; /* 기본 상태에서 애니메이션 실행 */
+        }
+
+       /* 유리 광택 효과 */
+        .category-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 80%;
+            height: 80%;
+            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.9), transparent 60%); /* 중심만 밝게 */
+            transform: translate(-50%, -50%) rotate(-45deg);
+            opacity: 0.9;
+            animation: shine 3s infinite ease-in-out;
+            transition: opacity 0.3s;
+        }
+
+        /* 더욱 강한 호버 효과 */
+        .category-btn:hover {
+            background: white;
+            border: 3px solid black;
+            transform: translateY(-5px);
+            box-shadow: 0px 0px 3px rgba(0, 0, 0, 0.6),
+                        inset -2px -2px 6px rgba(255, 255, 255, 1);
+        }
+
+        /* 기본 상태에서 유리 반짝임 애니메이션 */
+        @keyframes glass-shine {
+            0%, 100% { box-shadow: 8px 20px rgba(0, 0, 0, 0.2), inset -10px -10px 20px rgba(255, 255, 255, 1); }
+            50% { box-shadow: 12px 25px rgba(0, 0, 0, 0.25), inset -12px -12px 25px rgba(255, 255, 255, 1); }
+        }
+
+        /* 광택 애니메이션 */
+        @keyframes shine {
+            0% { transform: translate(-100%, -100%) rotate(-45deg); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translate(100%, 100%) rotate(-45deg); opacity: 0; }
+        }
+
+        .scroll-button-container {
+            position: fixed;
+            top: 50%;
+            right: 50px;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .scroll-button {
+            background-color: #5D9BD6;
+            color: white;
+            border: none;
+            width: 57px;
+            height: 57px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            outline: none;
+        }
+
+        .scroll-button:hover {
+            background-color: #0056b3;
+        }
+
+        .scroll-button:focus {
+            outline: none;
+        }
+
+        .scroll-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+            line-height: 1.2;
+        }
+        .wishlist-container img {
+            transition: filter 0.3s ease;
+        }
+
+        .wishlist-container img:hover {
+            filter: grayscale(100%);
+        }
+        .wishlist-container li{
+            transition:transform 0.3s ease;
+        }
+        .wishlist-container li:hover{
+            transform: translateY(-5px);
+        }
+        .link-hover h6 {
+            transition: color 0.3s ease, transform 0.3s ease;
+            text-align: center;
+            display: block;
+            color: gray;
+        }
+
+        .link-hover:hover h6 {
+            color: black;
+            transform: translateY(-5px);
+        }
+
+        .link-hover {
+            text-decoration: none !important; /* 링크에 강제 밑줄 제거 */
+        }
+
+        .link-hover:hover {
+            text-decoration: none !important; /* 링크에 강제 밑줄 제거 */
+        }
+        .heart-icon {
+            position: absolute;
+            top: 270px; /* 카드 상단으로 고정 */
+            right: -20px;
+            font-size: 50px;
+            color: red;
+            transition: color 0.3s;
+            z-index: 1000;
+        }
+        @keyframes bounce {
+            0% { transform: translateY(0); }
+            30% { transform: translateY(-15px); }
+            60% { transform: translateY(5px); }
+            100% { transform: translateY(0); }
+        }
+
+        .price-digit {
+            display: inline-block;
+            animation: bounce 0.5s ease forwards;
+        }
+
+        /* 무한 스크롤 앵커 */
+        #scroll-anchor {
+            width: 100%;
+            height: 50px;
+        }
+
+        .dot {
+            opacity: 0;
+            animation: dot-blink 1s infinite;
+        }
+
+        .dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: 0.3s;
+        }
+
+        .dot:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+
+        @keyframes dot-blink {
+            0%, 20% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        .main-img {
+            transition: transform 0.3s ease;
+        }
+
+        .main-img:hover {
+            transform: scale(1.05); /* 1.05배 확대 */
+        }
+
+        .announcement-bar {
+            width: 100%;
+            overflow: hidden;
+            background-color: #f8e6e6; /* 연한 빨간 회색 */
+            border-top: 1px solid #e0b0b0; /* 더 짙은 빨간 회색 테두리 */
+            font-size: 1em;
+            font-weight: 500;
+            color: #333;
+            display: flex;
+            align-items: center;
+            height: 60px;
+        }
+
+        .announcement-content {
+            display: flex;
+            animation: scrollContinuous 30s linear infinite; /* 더 긴 애니메이션 시간 */
+        }
+
+        .announcement-section {
+            padding: 10px 20px;
+            white-space: nowrap;
+        }
+
+        .announcement-section.short {
+            flex: 0 0 8%;
+            font-weight: bold;
+            color: #007bff;
+            text-align:right;
+        }
+
+        .announcement-section:not(.short) {
+            flex: 1 1 25%;
+            text-align: center;
+        }
+
+        /* 자연스럽게 이어지는 무한 슬라이드 애니메이션 */
+        @keyframes scrollContinuous {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); } /* 절반까지 이동하면 반복 시작 */
+        }
+    </style>
+</th:block>
+
+<div layout:fragment="content">
+    <div id="carouselControls" class="carousel slide margin" data-ride="carousel" data-interval="2800">
+        <div class="carousel-inner">
+            <div class="carousel-item active item">
+                <a class="nav-link" href="/biditem/list">
+                    <img class="d-block w-100 banner" src="/images/banner1.png" alt="First slide">
+                </a>
+            </div>
+            <div class="carousel-item">
+                <a class="nav-link" href="/biditem/list">
+                    <img class="d-block w-100 banner" src="/images/banner2.png" alt="Second slide">
+                </a>
+            </div>
+            <div class="carousel-item">
+                <a class="nav-link" href="/biditem/list">
+                    <img class="d-block w-100 banner" src="/images/banner3.png" alt="Third slide">
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <input type="hidden" name="searchQuery" th:value="${itemSearchDto.searchQuery}">
+    <div th:if="${not #strings.isEmpty(itemSearchDto.searchQuery)}" class="center">
+        <p class="h3 font-weight-bold" th:text="${itemSearchDto.searchQuery} + '검색 결과'"></p>
+    </div>
+
+    <div class="announcement-bar">
+        <div class="announcement-content">
+            <div class="announcement-section short">[ 공지 ]</div>
+            <div class="announcement-section">멤버십 등급 및 포인트 적립 안내</div>
+            <div class="announcement-section">고객센터 운영시간 변경 안내</div>
+            <div class="announcement-section">신규 기능 (경매) 추가 안내</div>
+            <!-- 동일한 공지사항 반복 -->
+            <div class="announcement-section short">[ 공지 ]</div>
+            <div class="announcement-section">멤버십 등급 및 포인트 적립 안내</div>
+            <div class="announcement-section">고객센터 운영시간 변경 안내</div>
+            <div class="announcement-section">신규 기능 (경매) 추가 안내</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2 class="text-center" style="margin-top:50px">카테고리</h2>
+
+        <!-- 카테고리 버튼 컨테이너 -->
+        <div class="d-flex flex-wrap justify-content-center" style="max-width: 900px; margin: 40px auto 50px auto; gap: 10px; letter-spacing:1.5px; font-weight:500">
+            <!-- 전체보기 버튼 포함 첫 5개 버튼 -->
+            <div class="d-flex justify-content-center mb-3" style="flex: 0 0 calc(20% - 10px);">
+                <a th:href="@{/}" class="btn rounded-circle category-btn">전체보기</a>
+            </div>
+            <div th:each="category, stat : ${categories}" th:if="${stat.index < 4}" class="d-flex justify-content-center mb-3" style="flex: 0 0 calc(20% - 10px);">
+                <a th:href="@{/(cid=${category.cid})}" class="btn rounded-circle category-btn" th:text="${category.cname}">카테고리</a>
+            </div>
+
+            <!-- 나머지 5개 버튼 -->
+            <div th:each="category, stat : ${categories}" th:if="${stat.index >= 4 && stat.index < 9}" class="d-flex justify-content-center mb-3" style="flex: 0 0 calc(20% - 10px);">
+                <a th:href="@{/(cid=${category.cid})}" class="btn rounded-circle category-btn" th:text="${category.cname}">카테고리</a>
+            </div>
+        </div>
+    </div>
+    <div class="scroll-button-container">
+        <div class="wishlist-container mb-3" th:if="${#authorization.expression('isAuthenticated()')}">
+            <!-- 로그인한 사용자에게만 콘텐츠 표시 -->
+            <a href="/members/wishlist" class="scroll-label link-hover">
+                <h6><i class="fas fa-heart red" style="color:red;"></i> 관심상품</h6>
+            </a>
+            <ul style="list-style-type: none; padding: 0;">
+                <!-- 관심 상품이 있는 경우 목록을 출력 -->
+                <li th:if="${not #lists.isEmpty(recentItemWishlist)}" th:each="wishlistItem : ${recentItemWishlist}" style="margin-bottom: 15px;">
+                    <a th:href="'/item/' + ${wishlistItem.itemId}" class="text-dark d-flex flex-column align-items-center" style="text-decoration: none !important;">
+                        <img th:src="${wishlistItem.imgUrl}" style="width: 95px; height: 95px; object-fit: contain; object-position: center;margin-bottom: 5px; border:1px solid lightgray; border-radius:10px;">
+                        <span th:text="${wishlistItem.itemNm}" style="font-size: 14px; overflow: hidden; text-overflow: ellipsis; text-align: left; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; width: 100px; line-height: 1.3em; max-height: 2.6em;"></span>
+                    </a>
+                </li>
+
+                <!-- 관심 상품이 없을 경우 표시할 메시지 -->
+                <li th:if="${#lists.isEmpty(recentItemWishlist)}" class="text-center" style="color: gray; font-size: 14px; margin-top:10px">
+                    현재 관심상품이 <br>없습니다.
+                </li>
+            </ul>
+        </div>
+
+        <!-- 로그인하지 않은 상태에서는 공간을 남겨두기 -->
+        <div th:if="${!#authorization.expression('isAuthenticated()')}" style="visibility: hidden; height: 450px;"></div>
+        <button class="scroll-button" onclick="scrollToHeader()">
+            <div class="scroll-label">
+                UP<br>
+                <i class="fas fa-chevron-up"></i>
+            </div>
+        </button>
+
+        <!-- Scroll Down Button -->
+        <button class="scroll-button" onclick="scrollToFooter()">
+            <div class="scroll-label">
+                <i class="fas fa-chevron-down"></i>
+                DOWN<br>
+            </div>
+        </button>
+    </div>
+    <div class="row" id="item-container">
+        <th:block th:each="item : ${items.getContent()}">
+            <div class="col margin" style="flex: 0 0 20%; max-width: 20%;">
+                <div class="card" style="border:none">
+                    <!-- 찜 아이콘 -->
+                    <i th:if="${#authorization.expression('isAuthenticated()') and item.isWishlisted}"
+                       class="heart-icon fas fa-heart red wishlisted"></i>
+                    <a th:href="'/item/' + ${item.id}" class="text-dark main-img">
+                        <img th:src="${item.imgUrl}" class="card-img-top" th:alt="${item.itemNm}" style="height: 300px; width: 100%; object-fit: contain; object-position: center; border:1px solid lightgray; border-radius:10px;">
+                    </a>
+                    <div class="card-body">
+                        <div>
+                            <span th:classappend="${item.itemSellStatus == T(com.treasuredigger.devel.constant.ItemSellStatus).SELL} ? 'badge badge-primary' : 'badge btn-danger'"
+                                  th:text="${item.itemSellStatus == T(com.treasuredigger.devel.constant.ItemSellStatus).SELL ? '판매중' : '품절'}">
+                            </span>
+                        </div>
+                        <span class="card-title" style="font-size:18px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; max-width: 100%; line-height: 1.3em; height: 50px; margin-bottom: 10px;">[[${item.itemNm}]]</span>
+                        <span class="card-title text-danger" style="font-size:18px; font-weight:bold"><span th:text="${item.price}"></span>원</span>
+                    </div>
+                </div>
+            </div>
+        </th:block>
+    </div>
+    <div id="loading-indicator" style="text-align: center; font-size: 100px; color: gray; display: none;">
+        <span class="dot">.</span>
+        <span class="dot">.</span>
+        <span class="dot">.</span>
+    </div>
+    <div id="scroll-anchor"></div> <!-- 무한 스크롤을 위한 앵커 요소 -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            let pageNumber = 1; // 시작 페이지 번호
+            const scrollAnchor = document.getElementById('scroll-anchor');
+            const itemContainer = document.getElementById('item-container');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            let loading = false;
+
+            const observer = new IntersectionObserver(async (entries) => {
+                if (entries[0].isIntersecting && !loading) {
+                    loading = true;
+                    loadingIndicator.style.display = 'block';
+
+                    // 1초 지연 후에 로딩 시작
+                    setTimeout(async () => {
+                        await loadMoreItems();
+                        loadingIndicator.style.display = 'none';
+                        loading = false;
+                    }, 1000);
+                }
+            });
+
+            observer.observe(scrollAnchor);
+            const cid = new URLSearchParams(window.location.search).get('cid'); // 현재 URL에서 cid 가져오기
+
+            const searchQuery = new URLSearchParams(window.location.search).get('searchQuery'); // 현재 URL에서 searchQuery 가져오기
+            async function loadMoreItems() {
+                try {
+                    const response = await fetch(`/loadItems?page=${pageNumber}&size=20${cid ? `&cid=${cid}` : ''}${searchQuery ? `&searchQuery=${searchQuery}` : ''}`);
+                    const newItemsHtml = await response.text();
+
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = newItemsHtml;
+                    const newItems = tempDiv.querySelectorAll('.col.margin');
+                    newItems.forEach(item => itemContainer.appendChild(item));
+
+                    pageNumber++;
+                    animatePrices(); // 새로 로드된 아이템 가격에 애니메이션 적용
+                } catch (error) {
+                    console.error("추가 아이템 로드 중 오류 발생:", error);
+                }
+            }
+
+            const animateObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const priceElement = entry.target.querySelector('.card-title.text-danger span');
+                        if (!priceElement.classList.contains('animated')) {
+                            animatePrice(priceElement);
+                            priceElement.classList.add('animated'); // 애니메이션 완료 후 'animated' 클래스 추가
+                        }
+                        animateObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.5 });
+
+            function animatePrice(element) {
+                const targetPrice = parseInt(element.textContent.replace(/,/g, ''), 10);
+                const formattedPrice = targetPrice.toLocaleString();
+                element.textContent = "";
+
+                formattedPrice.split('').forEach((digit, index) => {
+                    const digitSpan = document.createElement('span');
+                    digitSpan.classList.add('price-digit');
+                    digitSpan.textContent = digit;
+                    digitSpan.style.animationDelay = `${index * 0.1}s`;
+                    element.appendChild(digitSpan);
+                });
+            }
+
+            function animatePrices() {
+                document.querySelectorAll('.col.margin').forEach(element => {
+                    animateObserver.observe(element);
+                });
+            }
+
+            animatePrices();
+        });
+        function scrollToHeader() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function scrollToFooter() {
+            document.querySelector('.footer').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+    <script>
+        var message ="[[${message}]]";
+        if (message && message.trim().length > 0) {
+            alert(message);  // 유효한 메시지가 있을 경우만 알림을 띄움
+        }
+    </script>
+</div>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+    <meta charset="UTF-8">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+
+    <title>Title</title>
+
+    <!-- CSS only -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link th:href="@{/css/layout1.css}" rel="stylesheet">
+
+    <!-- JS, Popper.js, and jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <th:block layout:fragment="script"></th:block>
+    <th:block layout:fragment="css"></th:block>
+
+</head>
+<body>
+
+    <div th:replace="~{fragments/header::header}"></div>
+
+    <div layout:fragment="content" class="content">
+
+    </div>
+
+    <div class="footer" th:replace="~{fragments/footer::footer}"></div>
+<script>
+    // 다음 등급까지 필요한 금액 포맷팅
+    const amountNeededElement = document.getElementById("amountNeeded");
+    if (amountNeededElement) {
+        const amountNeededText = amountNeededElement.textContent; // 원래 텍스트 가져오기
+        const amountNeededValue = parseInt(amountNeededText.replace(/[^0-9]/g, '')); // 숫자만 추출
+
+        if (!isNaN(amountNeededValue)) {
+            // 콤마 추가
+            const formattedAmount = formatNumberWithCommas(amountNeededValue);
+            amountNeededElement.textContent = `다음 등급까지: ${formattedAmount}원`;
+        }
+    }
+
+    function formatNumberWithCommas(number) {
+        return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+</script>
+</body>
+</html>

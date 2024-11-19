@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.treasuredigger.devel.mapper.BidItemMapper">
+
+    <!-- 공통 쿼리 설정 -->
+    <sql id="BaseBidItemQuery">
+        SELECT
+        btt.bid_item_id AS bidItemId,
+        btt.bid_item_name AS bidItemName,
+        btt.bid_item_desc AS bidItemDesc,
+        btt.start_price AS startPrice,
+        btt.max_price AS maxPrice,
+        btt.bid_start_date AS bidStartDate,
+        btt.bid_end_date AS bidEndDate,
+        btt.item_status AS itemStatus,
+        btt.created_by AS memberId,
+        btt.cid AS itemCategoryId,
+        ct.cname as cname,
+        bii.bid_img_name AS bidImgName,
+        bii.bid_img_url AS bidImgUrl,
+        bii.bid_ori_img_name AS bidOriImgName,
+        (SELECT MAX(bt.bid_reg_price)
+        FROM bids_tbl bt
+        WHERE bt.bid_item_id = btt.bid_item_id) AS bidNowPrice,
+        (SELECT count(bt.bid_reg_price)
+        FROM bids_tbl bt
+        WHERE bt.bid_item_id = btt.bid_item_id) AS bidcount,
+        (SELECT m.email
+        FROM `member` m
+        WHERE m.member_id = btt.member_id) AS email,
+        mg.mgid AS mgId,
+        mg.member_grade_status AS mgst,
+        (SELECT bt.buy_now_check
+        FROM bids_tbl bt
+        WHERE bt.bid_item_id = btt.bid_item_id
+        ORDER BY bt.bid_reg_time DESC
+        LIMIT 1) AS buyNowCheck
+        FROM bid_items_tbl btt
+        JOIN bid_item_img bii ON btt.bid_item_id = bii.bid_item_id
+        LEFT JOIN member_grade_tbl mg ON btt.member_id = mg.member_id
+        JOIN category_tbl ct ON btt.cid = ct.cid
+        WHERE bii.bid_repimg_yn = 'Y'
+
+
+
+
+
+
+    </sql>
+
+    <!-- 검색 기능 쿼리 -->
+    <select id="selectBidList" resultType="com.treasuredigger.devel.dto.BidItemDto">
+        <include refid="BaseBidItemQuery" />
+        <if test="auctionStatus != 'END'">
+            AND btt.item_status !='END'
+        </if>
+
+        <if test="cid != null and cid != ''">
+            AND btt.cid = #{cid}
+        </if>
+        <if test="searchQuery != null and searchQuery != ''">
+            AND (btt.bid_item_name LIKE CONCAT('%', #{searchQuery}, '%')
+            OR btt.bid_item_desc LIKE CONCAT('%', #{searchQuery}, '%'))
+        </if>
+        <if test="auctionStatus != null and auctionStatus != ''">
+        AND btt.item_Status = #{auctionStatus}
+        </if>
+
+
+        ORDER BY btt.bid_end_date
+        LIMIT #{pageable.offset}, #{pageable.pageSize}
+    </select>
+
+    <!-- 검색 조건을 포함한 총 항목 수를 구하는 쿼리 -->
+    <select id="countBidItems" resultType="int">
+        SELECT COUNT(*)
+        FROM bid_items_tbl btt
+        JOIN bid_item_img bii ON btt.bid_item_id = bii.bid_item_id
+        WHERE bii.bid_repimg_yn = 'Y'
+        <if test="cid != null and cid != ''">
+            AND btt.cid = #{cid}
+        </if>
+        <if test="searchQuery != null and searchQuery != ''">
+            AND (btt.bid_item_name LIKE CONCAT('%', #{searchQuery}, '%')
+            OR btt.bid_item_desc LIKE CONCAT('%', #{searchQuery}, '%'))
+        </if>
+    </select>
+
+    <!-- 상세보기 기능 쿼리 -->
+    <select id="selectBidItemById" resultType="com.treasuredigger.devel.dto.BidItemDto">
+        <include refid="BaseBidItemQuery" />
+        AND btt.bid_item_id = #{bidItemId}
+    </select>
+
+    <select id="getBidMyList" resultType="com.treasuredigger.devel.dto.BidItemDto">
+        <include refid="BaseBidItemQuery" />
+        AND btt.created_by = #{createdBy}
+        order by btt.bid_end_date desc
+    </select>
+
+
+
+    <select id="getBidList" resultType="com.treasuredigger.devel.dto.BidDto">
+        SELECT *
+        FROM (
+        SELECT
+        ROW_NUMBER() OVER (ORDER BY bt.reg_time desc) AS rownum,
+        bt.bino AS bino,
+        bt.reg_time AS regtime,
+        bt.bid_reg_price AS bidregprice,
+        bt.created_by AS createdBy,
+        bt.bid_item_id AS biditemid,
+        bt.member_id,
+        m.email as email
+        FROM bids_tbl bt join `member` m  on bt.member_id = m.member_id
+        WHERE bt.bid_item_id = #{bidItemId}
+        ) subquery
+        WHERE subquery.rownum > 0
+
+    </select>
+
+    <select id="getSuccessfulBid" resultType="com.treasuredigger.devel.dto.BidDto">
+        SELECT max(bt.bid_reg_price) as bidregprice,
+        m.email as email,
+        m.mid as mid
+        FROM bids_tbl bt
+        JOIN `member` m ON bt.member_id = m.member_id
+        WHERE bt.bid_item_id = #{bidItemId}
+        AND bt.bid_reg_price = (
+        SELECT MAX(bid_reg_price)
+        FROM bids_tbl
+        WHERE bid_item_id = #{bidItemId}
+        )
+
+    </select>
+
+
+</mapper>

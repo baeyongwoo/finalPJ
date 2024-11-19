@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layouts/layout1}">
+
+<head>
+    <!--<meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+
+<!-- 사용자 스크립트 추가 -->
+<th:block layout:fragment="script">
+    <script th:inline="javascript">
+        $(document).ready(function(){
+            var price = $("#price").val();
+            $("#priceDisplay").html(price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + '원');
+            calculateTotalPrice();
+
+            // 메인 수량 입력 필드 변경 시
+            $("#count, #floatingCountInput").on("change input", function(){
+                validateStock($(this));  // 재고 검사
+                calculateTotalPrice();   // 결제 금액 업데이트
+            });
+
+            // 큰 이미지 초기 설정
+            $("#largeImage").attr("src", $(".thumbnail-img").first().attr("src"));
+            $(".thumbnail-img").first().addClass("selected-thumbnail");
+
+            // 조그만 이미지 클릭 시 큰 이미지로 변경
+            $(".thumbnail-img").click(function() {
+                var src = $(this).attr("src");
+                $("#largeImage").addClass("fade-out");
+                setTimeout(function() {
+                    $("#largeImage").attr("src", src).removeClass("fade-out");
+                }, 250);
+                $(".thumbnail-img").removeClass("selected-thumbnail");
+                $(this).addClass("selected-thumbnail");
+            });
+        });
+
+        function calculateTotalPrice(){
+            var count = $("#count").val();
+            var price = $("#price").val();
+            var totalPrice = price * count;
+            var formattedTotalPrice = totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + '원';
+
+            // 원래 totalPrice를 표시하는 영역 업데이트
+            $("#totalPrice").html(formattedTotalPrice); // 기존 결제 금액 표시 영역
+
+            // 스크롤에 표시되는 결제 금액 업데이트
+            $("#floatingTotalPrice").html(formattedTotalPrice);
+
+            // 수량 정보 업데이트
+            $("#floatingCountDisplay").html($("#stockDisplay").text());
+            $("#floatingCountInput").val(count);
+        }
+
+        // 재고 초과 검사 함수
+        function validateStock(inputField) {
+            var stock = parseInt($("#stockDisplay").text(), 10); // 재고 수량
+            var count = parseInt(inputField.val(), 10); // 입력된 수량
+
+            if (count > stock) {
+                alert("재고 수량을 초과했습니다. 남은 재고: " + stock + "개");
+                count = stock; // 재고 수량으로 설정
+                inputField.val(count); // 입력 필드에 업데이트
+            }
+
+            // 수량을 다른 입력 필드에도 동기화하고, 결제 금액 업데이트
+            $("#count").val(count);
+            $("#floatingCountInput").val(count);
+        }
+
+        function order(){
+            var token = $("meta[name='_csrf']").attr("content");
+            var header = $("meta[name='_csrf_header']").attr("content");
+
+            var url = "/order";
+            var paramData = {
+                itemId: $("#itemId").val(),
+                count: $("#count").val()
+            };
+
+            var param = JSON.stringify(paramData);
+
+            $.ajax({
+                url: url,
+                type: "POST",
+                contentType: "application/json",
+                data: param,
+                beforeSend: function(xhr){
+                    xhr.setRequestHeader(header, token);
+                },
+                dataType: "json",
+                cache: false,
+                success: function(result, status){
+                    var orderId = result;
+                    // 팝업 창 크기 설정
+                    var width = 1000;
+                    var height = 700;
+
+                    // 브라우저 창의 중앙에 위치 계산
+                    var left = window.screenX + (window.innerWidth - width) / 2;
+                    var top = window.screenY + (window.innerHeight - height) / 2;
+
+                    // 새 창으로 결제 페이지 열기 (중앙 위치 설정)
+                    var paymentWindow = window.open(
+                        '/payments/paymentP?orderId=' + orderId,
+                        'paymentPopup',
+                        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+                    );
+                },
+                error: function(jqXHR, status, error){
+                    if (jqXHR.status === 400) {
+                        alert(jqXHR.responseText); // 서버에서 받은 에러 메시지 출력
+                    } else {
+                        alert('로그인 후 이용해주세요');
+                        location.href = '/members/login';
+                    }
+                }
+            });
+        }
+
+        function addCart(){
+            var token = $("meta[name='_csrf']").attr("content");
+            var header = $("meta[name='_csrf_header']").attr("content");
+
+            var url = "/cart";
+            var paramData = {
+                itemId: $("#itemId").val(),
+                count: $("#count").val()
+            };
+
+            var param = JSON.stringify(paramData);
+
+            $.ajax({
+                url: url,
+                type: "POST",
+                contentType: "application/json",
+                data: param,
+                beforeSend: function(xhr){
+                    xhr.setRequestHeader(header, token);
+                },
+                dataType: "json",
+                cache: false,
+                success: function(result, status){
+                    alert("상품을 장바구니에 담았습니다.");
+                    location.href = '/cart';
+                },
+                error: function(jqXHR, status, error){
+                    alert('로그인 후 이용해주세요');
+                    location.href = '/members/login';
+                }
+            });
+        }
+        function scrollToHeader() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function scrollToFooter() {
+            document.querySelector('.footer').scrollIntoView({ behavior: 'smooth' });
+        }
+        // 스크롤 이벤트에서 보여지는 수량과 결제 금액 동기화
+        $(document).ready(function() {
+            $(window).scroll(function() {
+                var scrollPosition = $(window).scrollTop();
+                var triggerPosition = 600;
+
+                if (scrollPosition > triggerPosition) {
+                    $('#floatingPurchaseContainer').addClass('visible');
+                    calculateTotalPrice();  // 스크롤 시 결제 금액과 수량 동기화
+                } else {
+                    $('#floatingPurchaseContainer').removeClass('visible');
+                }
+            });
+
+            // floatingCountInput 변경 시 기존 수량 입력 필드에 동기화
+            $("#floatingCountInput").on("input", function() {
+                var floatingCount = $(this).val();
+                $("#count").val(floatingCount);
+                calculateTotalPrice();  // 수량 변경에 따라 결제 금액 업데이트
+            });
+        });
+    </script>
+</th:block>
+
+<!-- 사용자 CSS 추가 -->
+<th:block layout:fragment="css">
+    <style>
+        .mgb-15 {
+            margin-bottom: 15px;
+        }
+        .mgt-30 {
+            margin-top: 30px;
+        }
+        .mgt-120 {
+            margin-top: 120px;
+        }
+
+        .repImg {
+            width: 100%;
+            height: 400px;
+            object-fit: contain;
+            object-position: center;
+            border:1px solid lightgray;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+        .repImg.fade-out {
+            opacity: 0;
+        }
+        .carousel-img {
+            width: 104px;
+            height: 130px;
+            cursor: pointer;
+            object-fit: contain;
+            object-position: center;
+            margin-top:15px;
+            border:1px solid lightgray;
+            padding:3px;
+            border-radius:10px;
+            transition: transform 0.3s ease;
+        }
+        .carousel-img.selected-thumbnail {
+            transform: scale(1.15);
+        }
+        .flex-container {
+            display: flex;
+            align-items: stretch;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .flex-item {
+            width:50%;
+            margin-right:100px;
+        }
+        .flex-item:last-child {
+            margin-right: 0;
+        }
+        .thumbnail-container {
+            display: flex;
+            gap: 10px;
+        }
+        .wishlist-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin: 0; /* 버튼의 여백 제거 */
+            padding: 0; /* 패딩 제거하여 크기 최소화 */
+        }
+
+        .wishlist-btn .fa-heart {
+            font-size: 24px;
+            color: grey;
+        }
+
+        .wishlist-btn .fa-heart.red {
+            color: red;
+        }
+
+        .wishlist-btn:focus {
+            outline: none;
+            box-shadow: none;
+        }
+        .scroll-button-container {
+            position: fixed;
+            top: 50%;
+            right: 50px;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .scroll-button {
+            background-color: #5D9BD6;
+            color: white;
+            border: none;
+            width: 57px;
+            height: 57px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            outline: none;
+        }
+
+        .scroll-button:hover {
+            background-color: #0056b3;
+        }
+
+        .scroll-button:focus {
+            outline: none;
+        }
+
+        .scroll-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+            line-height: 1.2;
+        }
+        .scroll-button-container  top: 52%;
+        .wishlist-container img {
+            transition: filter 0.3s ease;
+        }
+
+        .wishlist-container img:hover {
+            filter: grayscale(100%);
+        }
+        .wishlist-container li{
+            transition:transform 0.3s ease;
+        }
+        .wishlist-container li:hover{
+            transform: translateY(-5px);
+        }
+        .link-hover h6 {
+            transition: color 0.3s ease, transform 0.3s ease;
+            text-align: center;
+            display: block;
+            color: gray;
+        }
+
+        .link-hover:hover h6 {
+            color: black;
+            transform: translateY(-5px);
+        }
+
+        .link-hover {
+            text-decoration: none !important; /* 링크에 강제 밑줄 제거 */
+        }
+
+        .link-hover:hover {
+            text-decoration: none !important; /* 링크에 강제 밑줄 제거 */
+        }
+        .floating-container {
+            position: fixed;
+            width:370px;
+            left: -370px;
+            bottom: 40%;
+            transition: left 0.5s ease-in-out;
+            z-index: 10000;
+            border: 1px solid silver;
+            padding:20px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            border-radius:10px;
+        }
+
+        .floating-container.visible {
+            left: 20px; /* 보이는 위치 조정 */
+        }
+
+        .floating-purchase
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</th:block>
+
+<div layout:fragment="content" style="margin-left: 25%; margin-right: 25%;">
+    <!-- 추가된 결제/구매 컨테이너 -->
+    <div th:if="${item.itemSellStatus == T(com.treasuredigger.devel.constant.ItemSellStatus).SELL}" id="floatingPurchaseContainer" class="floating-container">
+        <div class="floating-purchase">
+            <div th:if="${item.stockNumber > 0}" class="text-right">
+                <h5>결제 금액</h5>
+                <h3 id="floatingTotalPrice" class="font-weight-bold"></h3>
+                <!-- 수량 표시와 수량 입력 필드 추가 -->
+                <div class="input-group" style="margin-top: 15px; margin-left: auto; width:200px">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">수량</span>
+                    </div>
+                    <input type="number" id="floatingCountInput" class="form-control text-left" style="margin-left: auto;" min="1" value="1">
+                </div>
+                <div class="mb-3">
+                    남은 재고 : <span id="floatingCountDisplay"></span>개<br>
+                </div>
+                <button type="button" class="btn btn-light border border-primary btn-lg" onclick="addCart()">
+                    <img src="/images/cartAdd.png" style="width:30px"> 장바구니 담기
+                </button>
+                <button type="button" class="btn btn-primary btn-lg" onclick="order()">구매</button>
+            </div>
+        </div>
+    </div>
+    <input type="hidden" id="itemId" th:value="${item.id}">
+    <div style="width: 80%; margin: 0 auto;">
+        <div class="h6" th:text="'🌟일반상품 >  ' + ${item.cname} +' > ' +  ${item.id}"></div>
+        <div class="flex-container mb-4">
+            <div class="flex-item">
+                <!-- 큰 이미지 -->
+                <div class="img" style="position: relative; width: 100%; margin: 0 auto;">
+                    <img id="largeImage"
+                         th:src="${item.itemImgDtoList[0].imgUrl}"
+                         class="rounded repImg"
+                         th:alt="${item.itemNm}"
+                         data-zoom="3"
+                         alt="큰 이미지"
+                         style="display: block; width: 100%;">
+
+                    <!-- 확대용 마그니파이어 -->
+                    <span class="magnifier"
+                          style="display: none; position: absolute; width: 200px; height: 200px; border-radius: 50%; z-index: 1; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);">
+                    </span>
+                </div>
+
+                <!-- 썸네일 이미지들 -->
+                <div class="thumbnail-container mb-4">
+                    <!-- 조그만 이미지들 -->
+                    <img th:each="itemImg : ${item.itemImgDtoList}"
+                         th:if="${not #strings.isEmpty(itemImg.imgUrl)}"
+                         th:src="${itemImg.imgUrl}"
+                         class="thumbnail-img carousel-img"
+                         alt="썸네일 이미지"
+                         style="width: 100px; height: 100px; object-fit: cover; margin-right: 10px;">
+                </div>
+
+                <span style="color:gray">※ 이미지에 마우스를 올리시면 확대하여 보실수 있습니다.</span>
+            </div>
+
+            <!-- 상품 정보 -->
+            <div class="flex-item" style="position: relative;">
+                <div class="d-flex justify-content-between">
+                    <span th:if="${item.itemSellStatus == T(com.treasuredigger.devel.constant.ItemSellStatus).SELL}" class="badge badge-primary mgb-15">
+                        판매중
+                    </span>
+                    <span th:unless="${item.itemSellStatus == T(com.treasuredigger.devel.constant.ItemSellStatus).SELL}" class="badge btn-danger mgb-15">
+                        품절
+                    </span>
+                    <div></div> <!-- 빈 div로 첫 번째 줄을 비우기 위해 추가 -->
+                    <button id="wishlistButton" data-biditemid="${biditem.bidItemId}" class="wishlist-btn" sec:authorize="isAuthenticated()">
+                        <i id="heartIcon" class="far fa-heart"></i> <!-- 기본은 빈 하트 -->
+                    </button>
+                </div>
+                <script>
+                    $(document).ready(function() {
+                         var csrfToken = $('meta[name="_csrf"]').attr('content');
+                         var csrfHeader = $('meta[name="_csrf_header"]').attr('content');
+                         var ItemId = $('#itemId').val();
+                         var heartIcon = $('#heartIcon');
+
+                         // 페이지 로드 시 관심상품 여부 확인
+                         $.ajax({
+                             url: '/wishlist/check',
+                             type: 'GET',
+                             data: { entityType: 'Item', entityId: ItemId },
+                             beforeSend: function(xhr) {
+                                 xhr.setRequestHeader(csrfHeader, csrfToken);
+                             },
+                             success: function(response) {
+                                 if (response) {
+                                     heartIcon.addClass('fas red'); // 관심상품일 경우 채워진 빨간 하트
+                                 } else {
+                                     heartIcon.addClass('fas').addClass('grey'); // 관심상품이 아닐 경우 빈 하트
+                                 }
+                             },
+                             error: function(xhr, status, error) {
+                                 console.log('Status:', status);
+                                 console.log('Error:', error);
+                                 console.log('ResponseText:', xhr.responseText);
+                                 alert('관심상품 여부 확인에 실패했습니다.');
+                             }
+                         });
+
+                         // 관심상품 버튼 클릭 시 토글
+                         $('#wishlistButton').click(function() {
+                             $.ajax({
+                                 url: '/wishlist/toggle',
+                                 type: 'POST',
+                                 contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+                                 data: {  entityType: 'Item', entityId: ItemId },
+                                 beforeSend: function(xhr) {
+                                     xhr.setRequestHeader(csrfHeader, csrfToken);
+                                 },
+                                 success: function(response) {
+                                     if (heartIcon.hasClass('red')) {
+                                         heartIcon.removeClass('red');
+                                         alert('관심상품이 해제되었습니다.');
+                                     } else {
+                                         heartIcon.addClass('red');
+                                         alert('관심상품으로 등록되었습니다.');
+                                     }
+                                 },
+                                 error: function(xhr, status, error) {
+                                     console.log('Status:', status);
+                                     console.log('Error:', error);
+                                     console.log('ResponseText:', xhr.responseText);
+                                     alert('관심상품 기능에 실패했습니다.');
+                                 }
+                             });
+                         });
+                     });
+
+                </script>
+
+                <div class="h4" th:text="${item.itemNm}"></div>
+                <hr class="my-4">
+
+                <div class="text-right">
+                    <div class="h4 text-danger text-left">
+                        <input type="hidden" th:value="${item.price}" id="price" name="price">
+                        <span id="priceDisplay"></span>
+                    </div>
+                    <div th:if="${item.stockNumber > 0}" class="input-group w-50">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">수량</span>
+                        </div>
+                        <input type="number" name="count" id="count" class="form-control" value="1" min="1">
+                    </div>
+                </div>
+                <hr class="my-4">
+                남은 수량 : <span id="stockDisplay" th:text="${item.stockNumber}"></span>개 <br>
+                <div th:if="${item.stockNumber > 0}" class="text-right mgt-120">
+                    <h5>결제 금액</h5>
+                    <h3 id="totalPrice" class="font-weight-bold"></h3>
+                </div>
+
+                <div th:if="${item.itemSellStatus == T(com.treasuredigger.devel.constant.ItemSellStatus).SELL}" class="text-right">
+                    <button type="button" class="btn btn-light border border-primary btn-lg" onclick="addCart()"><img src="/images/cartAdd.png" style="width:30px"> 장바구니 담기</button>
+                    <button type="button" class="btn btn-primary btn-lg" onclick="order()">구매</button>
+                </div>
+                <div class="text-right" style="margin-top:10px;">
+                    <button type="button" class="btn btn-success btn-lg" onclick="history.back();">목록으로 돌아가기</button>
+                </div>
+                <div th:unless="${item.itemSellStatus == T(com.treasuredigger.devel.constant.ItemSellStatus).SELL}" class="text-right mt-2">
+                    <button type="button" class="btn btn-danger btn-lg">품절된 상품입니다</button>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-button-container">
+            <div class="wishlist-container mb-3" th:if="${#authorization.expression('isAuthenticated()')}">
+                <!-- 로그인한 사용자에게만 콘텐츠 표시 -->
+                <a href="/members/wishlist" class="scroll-label link-hover">
+                    <h6><i class="fas fa-heart red" style="color:red;"></i> 관심상품</h6>
+                </a>
+                <ul style="list-style-type: none; padding: 0;">
+                    <!-- 관심 상품이 있는 경우 목록을 출력 -->
+                    <li th:if="${not #lists.isEmpty(recentItemWishlist)}" th:each="wishlistItem : ${recentItemWishlist}" style="margin-bottom: 15px;">
+                        <a th:href="'/item/' + ${wishlistItem.itemId}" class="text-dark d-flex flex-column align-items-center" style="text-decoration: none !important;">
+                            <img th:src="${wishlistItem.imgUrl}" style="width: 95px; height: 95px; object-fit: contain; object-position: center;margin-bottom: 5px; border:1px solid lightgray; border-radius:10px;">
+                            <span th:text="${wishlistItem.itemNm}" style="font-size: 14px; overflow: hidden; text-overflow: ellipsis; text-align: left; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; width: 100px; line-height: 1.3em; max-height: 2.6em;"></span>
+                        </a>
+                    </li>
+
+                    <!-- 관심 상품이 없을 경우 표시할 메시지 -->
+                    <li th:if="${#lists.isEmpty(recentItemWishlist)}" class="text-center" style="color: gray; font-size: 14px; margin-top:10px">
+                        현재 관심상품이 <br>없습니다.
+                    </li>
+                </ul>
+            </div>
+            <!-- 로그인하지 않은 상태에서는 공간을 남겨두기 -->
+            <div th:if="${!#authorization.expression('isAuthenticated()')}" style="visibility: hidden; height: 450px;"></div>
+            <button class="scroll-button" onclick="scrollToHeader()">
+                <div class="scroll-label">
+                    UP<br>
+                    <i class="fas fa-chevron-up"></i>
+                </div>
+            </button>
+
+            <!-- Scroll Down Button -->
+            <button class="scroll-button" onclick="scrollToFooter()">
+                <div class="scroll-label">
+                    <i class="fas fa-chevron-down"></i>
+                    DOWN<br>
+                </div>
+            </button>
+        </div>
+        <div>
+            <hr class="my-4">
+            <div class="itemDesc-container" style="margin: 0 auto 50px auto; width:90%">
+                <h4>상품상세설명</h4>
+                <p style="white-space: pre-wrap; margin-top:30px" th:text="${item.itemDetail}"></p>
+            </div>
+        </div>
+        <div th:each="itemImg : ${item.itemImgDtoList}" class="text-center">
+            <img th:if="${not #strings.isEmpty(itemImg.imgUrl)}" th:src="${itemImg.imgUrl}" class="rounded" width="90%" style="margin-bottom:50px">
+        </div>
+    </div>
+
+    <script>
+        $(".img").each(function () {
+            const zoomFactor = $(this).find('img').data('zoom') || 3; // data-zoom 속성에서 확대 배율 가져오기
+            const imageTarget = $(this).find('img'); // 대상 이미지
+            const magnifierDiv = $(this).find('.magnifier'); // 돋보기 요소
+
+            // 돋보기 크기를 늘리기 (예: width와 height를 150px로 설정)
+            const magnifierSize = 250;  // 돋보기의 크기
+            magnifierDiv.css({
+                "width": `${magnifierSize}px`,
+                "height": `${magnifierSize}px`
+            });
+
+            // 확대 효과 함수 정의
+            function magnify(e) {
+                const mousePosX = e.pageX - $(this).offset().left; // 마우스 X 좌표
+                const mousePosY = e.pageY - $(this).offset().top; // 마우스 Y 좌표
+
+                // 마우스가 이미지 영역 안에 있는지 확인
+                if (mousePosX < $(this).width() && mousePosY < $(this).height() && mousePosX > 0 && mousePosY > 0) {
+                    magnifierDiv.fadeIn(100); // 돋보기 표시
+                } else {
+                    magnifierDiv.fadeOut(100); // 돋보기 숨기기
+                    magnifierDiv.css("background-image", "none"); // 배경 이미지 숨기기
+                    return; // 이미지 바깥으로 나갔을 때는 더 이상 처리하지 않음
+                }
+
+                // 돋보기가 보일 때 위치와 배경을 업데이트
+                if (magnifierDiv.is(":visible")) {
+                    const bgPosX = -(mousePosX * zoomFactor - magnifierDiv.width() / 2);
+                    const bgPosY = -(mousePosY * zoomFactor - magnifierDiv.height() / 2);
+                    const magnifierPosX = mousePosX - magnifierDiv.width() / 2;
+                    const magnifierPosY = mousePosY - magnifierDiv.height() / 2;
+
+                    magnifierDiv.css({
+                        "left": magnifierPosX,
+                        "top": magnifierPosY,
+                        "background-image": `url('${imageTarget.attr("src")}')`, // 배경 이미지 설정
+                        "background-repeat": "no-repeat",
+                        "background-size": `${imageTarget.width() * zoomFactor}px ${imageTarget.height() * zoomFactor}px`, // 배경 크기 설정
+                        "background-position": `${bgPosX}px ${bgPosY}px`
+                    });
+                }
+            }
+
+            // 이미지에 mousemove 이벤트 핸들러 연결
+            $(this).on('mousemove', magnify);
+        });
+    </script>
+
+</div>
+</html>
